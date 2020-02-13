@@ -40,7 +40,8 @@ func RetrieveSongsById(db *gorm.DB, ids []string) []ddr_models.Song {
 func AddSongDifficulties(db *gorm.DB, difficulties []ddr_models.SongDifficulty) error {
 	return db.Transaction(func(tx *gorm.DB) error {
 		errCount := 0
-		for _, difficulty := range difficulties {
+		for _, difficulty := range difficulties {fmt.Println(difficulty)
+			fmt.Println(difficulty)
 			if err := tx.Create(&difficulty).Error; err != nil {
 				errCount++
 			}
