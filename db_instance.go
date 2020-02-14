@@ -8,9 +8,11 @@ import (
 
 var (
 	db *gorm.DB
+	idleConnectionLimit int
+
 )
 
-func OpenDb(user string, password string, dbname string, host string) (*gorm.DB, error) {
+func OpenDb(user string, password string, dbname string, host string, maxIdleConnections int) (*gorm.DB, error) {
 	connStr := fmt.Sprintf( "user=%s password=%s dbname=%s host=%s sslmode=disable", user, password, dbname, host)
 
 	newDb, err := gorm.Open("postgres", connStr)
@@ -18,6 +20,8 @@ func OpenDb(user string, password string, dbname string, host string) (*gorm.DB,
 		return nil, err
 	}
 	db = newDb
+	db.DB().SetMaxIdleConns(maxIdleConnections)
+	idleConnectionLimit = maxIdleConnections
 
 	return db, nil
 }
@@ -27,4 +31,8 @@ func GetDb() (*gorm.DB, error) {
 		return nil, fmt.Errorf("db connection has not been created, please use OpenDb()")
 	}
 	return db, nil
+}
+
+func GetIdleConnectionLimit() int {
+	return idleConnectionLimit
 }
