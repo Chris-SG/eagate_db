@@ -5,7 +5,6 @@ import (
 	"github.com/chris-sg/eagate_db"
 	"github.com/chris-sg/eagate_models/ddr_models"
 	"github.com/jinzhu/gorm"
-	"github.com/t-tiger/gorm-bulk-insert"
 )
 
 func AddSongs(db *gorm.DB, songs []ddr_models.Song) error {
@@ -59,6 +58,7 @@ func RetrieveSongsById(db *gorm.DB, ids []string) []ddr_models.Song {
 
 func AddSongDifficulties(db *gorm.DB, difficulties []ddr_models.SongDifficulty) error {
 	allSongDifficulties := RetrieveSongDifficulties(db)
+	errCount := 0
 	songDifficultiesToAddOrUpdate := make([]ddr_models.SongDifficulty, 0)
 	for _, scrapedDifficulty := range difficulties {
 		matched := false
@@ -73,9 +73,7 @@ func AddSongDifficulties(db *gorm.DB, difficulties []ddr_models.SongDifficulty) 
 		}
 	}
 
-	err := gormbulk.BulkInsert(db, songDifficultiesToAddOrUpdate, 500)
-
-	/*addToDb := func(dbConn *gorm.DB, diffJob <-chan ddr_models.SongDifficulty, doneJob chan<- bool) {
+	addToDb := func(dbConn *gorm.DB, diffJob <-chan ddr_models.SongDifficulty, doneJob chan<- bool) {
 		for diff := range diffJob {
 			err := dbConn.Save(&diff).Error
 			doneJob <- err == nil
@@ -99,13 +97,13 @@ func AddSongDifficulties(db *gorm.DB, difficulties []ddr_models.SongDifficulty) 
 			errCount++
 		}
 	}
-	close(done)*/
+	close(done)
 
-	/*if errCount != 0 {
+	if errCount != 0 {
 		return fmt.Errorf("error adding difficulties to db, failed %d of %d times", errCount, len(songDifficultiesToAddOrUpdate))
-	}*/
+	}
 
-	return err
+	return nil
 }
 
 func RetrieveSongDifficulties(db *gorm.DB) []ddr_models.SongDifficulty {
