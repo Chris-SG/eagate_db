@@ -8,9 +8,16 @@ import (
 )
 
 func Create(db *gorm.DB) {
+	CreateTables(db)
+	CreateConstraints(db)
+}
+
+func CreateTables(db *gorm.DB) {
 	createUserTables(db)
 	createDdrTables(db)
+}
 
+func CreateConstraints(db *gorm.DB) {
 	createDdrConstraints(db)
 }
 
@@ -22,7 +29,7 @@ func createUserTables(db *gorm.DB) {
 }
 
 func createDdrTables(db *gorm.DB) {
-	err := db.AutoMigrate(&ddr_models.Song{}, &ddr_models.SongDifficulty{}, &ddr_models.PlayerDetails{}, &ddr_models.Score{}).
+	err := db.AutoMigrate(&ddr_models.Song{}, &ddr_models.SongDifficulty{}, &ddr_models.PlayerDetails{}, &ddr_models.Playcount{}, &ddr_models.Score{}).
 			  Error
 	if err != nil {
 		fmt.Printf("error in AutoMigration: %s\n", err)
@@ -40,6 +47,13 @@ func createDdrConstraints(db *gorm.DB) {
 	err = db.Model(&ddr_models.PlayerDetails{}).
 		      AddForeignKey("eagate_user", "public.\"eaGateUser\"(account_name)", "RESTRICT", "RESTRICT").
 			  Error
+	if err != nil {
+		fmt.Printf("error in FK creation: %s\n", err)
+	}
+
+	err = db.Model(&ddr_models.Playcount{}).
+		AddForeignKey("player_code", "public.\"ddrPlayerDetails\"(code)", "RESTRICT", "RESTRICT").
+		Error
 	if err != nil {
 		fmt.Printf("error in FK creation: %s\n", err)
 	}
