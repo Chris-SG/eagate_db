@@ -108,7 +108,7 @@ func AddSongDifficulties(db *gorm.DB, difficulties []ddr_models.SongDifficulty) 
 
 func RetrieveSongDifficulties(db *gorm.DB) []ddr_models.SongDifficulty {
 	var difficulties []ddr_models.SongDifficulty
-	db.Model(&ddr_models.SongDifficulty{}).Scan(&difficulties)
+	db.Model(&ddr_models.SongDifficulty{}).Where("difficulty_value > -1").Scan(&difficulties)
 	return difficulties
 }
 
@@ -125,5 +125,109 @@ func AddPlaycountDetails(db *gorm.DB, playcountDetails ddr_models.Playcount) err
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func RetrieveDdrPlayerDetailsByEaGateUser(db *gorm.DB, eaUser string) (*ddr_models.PlayerDetails, error) {
+	results := make([]*ddr_models.PlayerDetails, 0)
+	db.Model(&ddr_models.PlayerDetails{}).Where("eagate_user = ?", eaUser).Scan(&results)
+	if len(results) == 0 {
+		return nil, fmt.Errorf("could not find user for username %s", eaUser)
+	}
+	if len(results) > 1 {
+		return nil, fmt.Errorf("multiple ddr users found for username %s", eaUser)
+	}
+	return results[0], nil
+}
+
+func AddSongStatistics(db *gorm.DB, songStatistics []ddr_models.SongStatistics, code int) error {
+	allSongStatistics := RetrieveSongStatistics(db, code)
+	errCount := 0
+	songStatisticsToAddOrUpdate := make([]ddr_models.SongStatistics, 0)
+	for _, scrapedStatistic := range songStatistics {
+		matched := false
+		for _, dbStatistic := range allSongStatistics {
+			if scrapedStatistic == dbStatistic {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			songStatisticsToAddOrUpdate = append(songStatisticsToAddOrUpdate, scrapedStatistic)
+		}
+	}
+
+	addToDb := func(dbConn *gorm.DB, statJob <-chan ddr_models.SongStatistics, doneJob chan<- bool) {
+		for stat := range statJob {
+			err := dbConn.Save(&stat).Error
+			doneJob <- err == nil
+		}
+	}
+
+	jobs := make(chan ddr_models.SongStatistics, len(songStatisticsToAddOrUpdate))
+	done := make(chan bool, len(songStatisticsToAddOrUpdate))
+
+	for w := 1; w <= eagate_db.GetIdleConnectionLimit(); w++ {
+		go addToDb(db, jobs, done)
+	}
+
+	for _, s := range songStatisticsToAddOrUpdate {
+		jobs <- s
+	}
+	close(jobs)
+
+	for result := 1; result <= len(songStatisticsToAddOrUpdate); result++ {
+		if <-done == false {
+			errCount++
+		}
+	}
+	close(done)
+
+	if errCount != 0 {
+		return fmt.Errorf("error adding statistics to db, failed %d of %d times", errCount, len(songStatisticsToAddOrUpdate))
+	}
+
+	return nil
+}
+
+func RetrieveSongStatistics(db *gorm.DB, code int) []ddr_models.SongStatistics {
+	var statistics []ddr_models.SongStatistics
+	db.Model(&ddr_models.SongStatistics{}).Where("player_code = ?", code).Scan(&statistics)
+	return statistics
+}
+
+func AddScores(db *gorm.DB, scores []ddr_models.Score) error {
+	errCount := 0
+
+	addToDb := func(dbConn *gorm.DB, scoreJob <-chan ddr_models.Score, doneJob chan<- bool) {
+		for score := range scoreJob {
+			err := dbConn.Save(&score).Error
+			doneJob <- err == nil
+		}
+	}
+
+	jobs := make(chan ddr_models.Score, len(scores))
+	done := make(chan bool, len(scores))
+
+	for w := 1; w <= eagate_db.GetIdleConnectionLimit(); w++ {
+		go addToDb(db, jobs, done)
+	}
+
+	for _, s := range scores {
+		jobs <- s
+	}
+	close(jobs)
+
+	for result := 1; result <= len(scores); result++ {
+		if <-done == false {
+			errCount++
+		}
+	}
+	close(done)
+
+	if errCount != 0 {
+		return fmt.Errorf("error adding scores to db, failed %d of %d times", errCount, len(scores))
+	}
+
 	return nil
 }
