@@ -29,6 +29,12 @@ func RetrieveUserById(db *gorm.DB, userId string) *user_models.User {
 	return &eaGateUser
 }
 
+func RetrieveUserByWebId(db *gorm.DB, webUserId string) []user_models.User {
+	users := make([]user_models.User, 0)
+	db.Model(&user_models.User{}).Where("web_user = ?", webUserId).Scan(&users)
+	return users
+}
+
 func RetrieveUserCookieById(db *gorm.DB, userId string) *http.Cookie {
 	eaGateUser := RetrieveUserById(db, userId)
 	if eaGateUser == nil {
@@ -44,4 +50,13 @@ func RetrieveUserCookieById(db *gorm.DB, userId string) *http.Cookie {
 		return nil
 	}
 	return req.Cookies()[0]
+}
+
+func SetWebUserForUser(db *gorm.DB, userId string, webId string) {
+	eaGateUser := RetrieveUserById(db, userId)
+	if eaGateUser == nil {
+		return
+	}
+	eaGateUser.WebUser = webId
+	db.Save(eaGateUser)
 }

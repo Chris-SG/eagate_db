@@ -44,14 +44,14 @@ func AddSongs(db *gorm.DB, songs []ddr_models.Song) error {
 
 func RetrieveSongIds(db *gorm.DB) []string {
 	var ids []string
-	db.Model(&ddr_models.Song{}).Select("song_id").Pluck("song_id", &ids)
+	db.Model(&ddr_models.Song{}).Select("id").Pluck("id", &ids)
 	//db.Select("song_id").Find(&ddr_models.Song{}).Pluck("song_id", &ids)
 	return ids
 }
 
 func RetrieveSongsById(db *gorm.DB, ids []string) []ddr_models.Song {
 	var songs []ddr_models.Song
-	db.Model(&ddr_models.Song{}).Where("song_id IN (?)", ids).Scan(&songs)
+	db.Model(&ddr_models.Song{}).Select([]string{"id", "name", "artist"}).Where("id IN (?)", ids).Scan(&songs)
 	return songs
 }
 
