@@ -2,43 +2,49 @@ package ddr_db
 
 import (
 	"fmt"
-	"github.com/chris-sg/eagate_db"
 	"github.com/chris-sg/eagate_models/ddr_models"
 	"github.com/jinzhu/gorm"
+	"github.com/lib/pq"
+	"strconv"
 )
 
+const maxBatchSize = 100
+
 func AddSongs(db *gorm.DB, songs []ddr_models.Song) error {
-	errCount := 0
-	addToDb := func(dbConn *gorm.DB, diffJob <-chan ddr_models.Song, doneJob chan<- bool) {
-		for diff := range diffJob {
-			err := dbConn.Save(&diff).Error
-			doneJob <- err == nil
+	currentIds := RetrieveSongIds(db)
+	for i := len(songs)-1; i >= 0; i-- {
+		for _, id := range currentIds {
+			if id == songs[i].Id {
+				songs = append(songs[:i], songs[i+1:]...)
+				break
+			}
+		}
+	}
+	fmt.Printf("%d songs to add\n", len(songs))
+	batchCount := 0
+	processedCount := 0
+	statements := make([]string, 0)
+	var statement string
+	statementBegin := `INSERT INTO public."ddrSongs" VALUES `
+	statementEnd := ` ON CONFLICT DO NOTHING;`
+	for i := len(songs)-1; i >= 0; i-- {
+		statement = fmt.Sprintf("%s ('%s', '%s', '%s', '%s')", statement, songs[i].Id, songs[i].Name, songs[i].Artist, songs[i].Image)
+		songs = songs[:len(songs)-1]
+		batchCount++
+		processedCount++
+		if batchCount == maxBatchSize || i == 0 {
+			statement = fmt.Sprintf("%s%s%s", statementBegin, statement, statementEnd)
+			statements = append(statements, statement)
+			statement = ""
+		} else {
+			statement = fmt.Sprintf("%s,", statement)
 		}
 	}
 
-	jobs := make(chan ddr_models.Song, len(songs))
-	done := make(chan bool, len(songs))
-
-	for w := 1; w <= eagate_db.GetIdleConnectionLimit(); w++ {
-		go addToDb(db, jobs, done)
+	for _, completeStatement := range statements {
+		fmt.Println(completeStatement)
+		db.Exec(completeStatement)
 	}
-
-	for _, song := range songs {
-		jobs <- song
-	}
-	close(jobs)
-
-	for result := 1; result <= len(songs); result++ {
-		if <-done == false {
-			errCount++
-		}
-	}
-	close(done)
-
-	if errCount != 0 {
-		return fmt.Errorf("error adding difficulties to db, failed %d of %d times", errCount, len(songs))
-	}
-
 	return nil
 }
 
@@ -55,64 +61,73 @@ func RetrieveSongsById(db *gorm.DB, ids []string) []ddr_models.Song {
 	return songs
 }
 
+func RetrieveSongsWithCovers(db *gorm.DB, ids []string) []ddr_models.Song {
+	var songs []ddr_models.Song
+	db.Model(&ddr_models.Song{}).Where("id IN (?)", ids).Scan(&songs)
+	return songs
+}
+
 
 func AddSongDifficulties(db *gorm.DB, difficulties []ddr_models.SongDifficulty) error {
 	allSongDifficulties := RetrieveSongDifficulties(db)
-	errCount := 0
-	songDifficultiesToAddOrUpdate := make([]ddr_models.SongDifficulty, 0)
-	for _, scrapedDifficulty := range difficulties {
-		matched := false
+	fmt.Printf("range %d across %d", len(difficulties), len(allSongDifficulties))
+	for i := len(difficulties)-1; i >= 0; i-- {
 		for _, dbDifficulty := range allSongDifficulties {
-			if scrapedDifficulty == dbDifficulty {
-				matched = true
+			if difficulties[i] == dbDifficulty {
+				difficulties = append(difficulties[:i], difficulties[i+1:]...)
 				break
 			}
 		}
-		if !matched {
-			songDifficultiesToAddOrUpdate = append(songDifficultiesToAddOrUpdate, scrapedDifficulty)
+	}
+
+	fmt.Printf("%d difficulties to add.\n", len(difficulties))
+
+	batchCount := 0
+	processedCount := 0
+	statements := make([]string, 0)
+	var statement string
+	statementBegin := `INSERT INTO public."ddrSongDifficulties" VALUES `
+	statementEnd := ` ON CONFLICT (song_id, mode, difficulty) DO UPDATE SET difficulty_value=EXCLUDED.difficulty_value;`
+	for i, _ := range difficulties {
+		statement = fmt.Sprintf("%s ('%s', '%s', '%s', %d)",
+			statement,
+			difficulties[i].SongId,
+			difficulties[i].Mode,
+			difficulties[i].Difficulty,
+			difficulties[i].DifficultyValue)
+
+		batchCount++
+		processedCount++
+		if batchCount == maxBatchSize || processedCount >= len(difficulties) {
+			statement = fmt.Sprintf("%s%s%s", statementBegin, statement, statementEnd)
+			statements = append(statements, statement)
+			statement = ""
+		} else {
+			statement = fmt.Sprintf("%s,", statement)
 		}
 	}
 
-	addToDb := func(dbConn *gorm.DB, diffJob <-chan ddr_models.SongDifficulty, doneJob chan<- bool) {
-		for diff := range diffJob {
-			err := dbConn.Save(&diff).Error
-			doneJob <- err == nil
-		}
+	for _, completeStatement := range statements {
+		fmt.Println(completeStatement)
+		db.Exec(completeStatement)
 	}
-
-	jobs := make(chan ddr_models.SongDifficulty, len(songDifficultiesToAddOrUpdate))
-	done := make(chan bool, len(songDifficultiesToAddOrUpdate))
-
-	for w := 1; w <= eagate_db.GetIdleConnectionLimit(); w++ {
-		go addToDb(db, jobs, done)
-	}
-
-	for _, diff := range songDifficultiesToAddOrUpdate {
-		jobs <- diff
-	}
-	close(jobs)
-
-	for result := 1; result <= len(songDifficultiesToAddOrUpdate); result++ {
-		if <-done == false {
-			errCount++
-		}
-	}
-	close(done)
-
-	if errCount != 0 {
-		return fmt.Errorf("error adding difficulties to db, failed %d of %d times", errCount, len(songDifficultiesToAddOrUpdate))
-	}
-
 	return nil
 }
 
 func RetrieveSongDifficulties(db *gorm.DB) []ddr_models.SongDifficulty {
+	var difficulties []ddr_models.SongDifficulty
+	db.Model(&ddr_models.SongDifficulty{}).Scan(&difficulties)
+	return difficulties
+}
+
+func RetrieveValidSongDifficulties(db *gorm.DB) []ddr_models.SongDifficulty {
 	var difficulties []ddr_models.SongDifficulty
 	db.Model(&ddr_models.SongDifficulty{}).Where("difficulty_value > -1").Scan(&difficulties)
 	return difficulties
 }
 
 func AddPlayerDetails(db *gorm.DB, playerDetails ddr_models.PlayerDetails) error {
+	fmt.Println(playerDetails)
 	err := db.Save(&playerDetails).Error
 	if err != nil {
 		return err
@@ -140,51 +155,67 @@ func RetrieveDdrPlayerDetailsByEaGateUser(db *gorm.DB, eaUser string) (*ddr_mode
 	return results[0], nil
 }
 
+func RetrieveLatestPlaycountDetails(db *gorm.DB, playerCode int) *ddr_models.Playcount {
+	pc := make([]*ddr_models.Playcount, 0)
+	db.Model(&ddr_models.Playcount{}).Where("player_code = ?", playerCode).Order("playcount DESC", true).First(&pc)
+	if len(pc) == 0 {
+		return nil
+	}
+	return pc[0]
+}
+
 func AddSongStatistics(db *gorm.DB, songStatistics []ddr_models.SongStatistics, code int) error {
 	allSongStatistics := RetrieveSongStatistics(db, code)
-	errCount := 0
-	songStatisticsToAddOrUpdate := make([]ddr_models.SongStatistics, 0)
-	for _, scrapedStatistic := range songStatistics {
-		matched := false
+	for i := len(songStatistics)-1; i >= 0; i-- {
 		for _, dbStatistic := range allSongStatistics {
-			if scrapedStatistic == dbStatistic {
-				matched = true
+			if songStatistics[i] == dbStatistic {
+				songStatistics = append(songStatistics[:i], songStatistics[i+1:]...)
 				break
 			}
 		}
-		if !matched {
-			songStatisticsToAddOrUpdate = append(songStatisticsToAddOrUpdate, scrapedStatistic)
+	}
+
+	batchCount := 0
+	processedCount := 0
+	statements := make([]string, 0)
+	var statement string
+	statementBegin := `INSERT INTO public."ddrSongStatistics" VALUES `
+	statementEnd := ` ON CONFLICT (song_id, mode, difficulty, player_code) DO UPDATE SET ` +
+		`score_record=EXCLUDED.score_record, ` +
+		`clear_lamp=EXCLUDED.clear_lamp, ` +
+		`rank=EXCLUDED.rank, ` +
+		`playcount=EXCLUDED.playcount, ` +
+		`clearcount=EXCLUDED.clearcount, ` +
+		`maxcombo=EXCLUDED.maxcombo, ` +
+		`lastplayed=EXCLUDED.lastplayed;`
+	for i, _ := range songStatistics {
+		statement = fmt.Sprintf("%s (%d, '%s', '%s', %d, %d, %d, '%s', '%s', '%s', '%s', %d)",
+			statement,
+			songStatistics[i].BestScore,
+			songStatistics[i].Lamp,
+			songStatistics[i].Rank,
+			songStatistics[i].PlayCount,
+			songStatistics[i].ClearCount,
+			songStatistics[i].MaxCombo,
+			pq.FormatTimestamp(songStatistics[i].LastPlayed),
+			songStatistics[i].SongId,
+			songStatistics[i].Mode,
+			songStatistics[i].Difficulty,
+			songStatistics[i].PlayerCode)
+
+		batchCount++
+		processedCount++
+		if batchCount == maxBatchSize || processedCount >= len(songStatistics) {
+			statement = fmt.Sprintf("%s%s%s", statementBegin, statement, statementEnd)
+			statements = append(statements, statement)
+			statement = ""
+		} else {
+			statement = fmt.Sprintf("%s,", statement)
 		}
 	}
 
-	addToDb := func(dbConn *gorm.DB, statJob <-chan ddr_models.SongStatistics, doneJob chan<- bool) {
-		for stat := range statJob {
-			err := dbConn.Save(&stat).Error
-			doneJob <- err == nil
-		}
-	}
-
-	jobs := make(chan ddr_models.SongStatistics, len(songStatisticsToAddOrUpdate))
-	done := make(chan bool, len(songStatisticsToAddOrUpdate))
-
-	for w := 1; w <= eagate_db.GetIdleConnectionLimit(); w++ {
-		go addToDb(db, jobs, done)
-	}
-
-	for _, s := range songStatisticsToAddOrUpdate {
-		jobs <- s
-	}
-	close(jobs)
-
-	for result := 1; result <= len(songStatisticsToAddOrUpdate); result++ {
-		if <-done == false {
-			errCount++
-		}
-	}
-	close(done)
-
-	if errCount != 0 {
-		return fmt.Errorf("error adding statistics to db, failed %d of %d times", errCount, len(songStatisticsToAddOrUpdate))
+	for _, completeStatement := range statements {
+		db.Exec(completeStatement)
 	}
 
 	return nil
@@ -197,36 +228,39 @@ func RetrieveSongStatistics(db *gorm.DB, code int) []ddr_models.SongStatistics {
 }
 
 func AddScores(db *gorm.DB, scores []ddr_models.Score) error {
-	errCount := 0
+	fmt.Printf("%d scores\n", len(scores))
 
-	addToDb := func(dbConn *gorm.DB, scoreJob <-chan ddr_models.Score, doneJob chan<- bool) {
-		for score := range scoreJob {
-			err := dbConn.Save(&score).Error
-			doneJob <- err == nil
+	batchCount := 0
+	processedCount := 0
+	statements := make([]string, 0)
+	var statement string
+	statementBegin := `INSERT INTO public."ddrScores" VALUES `
+	statementEnd := ` ON CONFLICT DO NOTHING;`
+	for i, _ := range scores {
+		statement = fmt.Sprintf("%s (%d, '%s', '%s', '%s', '%s', '%s', %d)",
+			statement,
+			scores[i].Score,
+			strconv.FormatBool(scores[i].ClearStatus),
+			pq.FormatTimestamp(scores[i].TimePlayed),
+			scores[i].SongId,
+			scores[i].Mode,
+			scores[i].Difficulty,
+			scores[i].PlayerCode)
+
+		batchCount++
+		processedCount++
+		if batchCount == maxBatchSize || processedCount >= len(scores) {
+			statement = fmt.Sprintf("%s%s%s", statementBegin, statement, statementEnd)
+			statements = append(statements, statement)
+			statement = ""
+		} else {
+			statement = fmt.Sprintf("%s,", statement)
 		}
 	}
 
-	jobs := make(chan ddr_models.Score, len(scores))
-	done := make(chan bool, len(scores))
-
-	for w := 1; w <= eagate_db.GetIdleConnectionLimit(); w++ {
-		go addToDb(db, jobs, done)
-	}
-
-	for _, s := range scores {
-		jobs <- s
-	}
-	close(jobs)
-
-	for result := 1; result <= len(scores); result++ {
-		if <-done == false {
-			errCount++
-		}
-	}
-	close(done)
-
-	if errCount != 0 {
-		return fmt.Errorf("error adding scores to db, failed %d of %d times", errCount, len(scores))
+	for _, completeStatement := range statements {
+		fmt.Println(completeStatement)
+		db.Exec(completeStatement)
 	}
 
 	return nil
