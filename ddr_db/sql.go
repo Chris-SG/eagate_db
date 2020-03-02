@@ -114,7 +114,7 @@ func AddSongDifficulties(db *gorm.DB, difficulties []ddr_models.SongDifficulty) 
 	return nil
 }
 
-func RetrieveSongDifficulties(db *gorm.DB) []ddr_models.SongDifficulty {
+func RetrieveAllSongDifficulties(db *gorm.DB) []ddr_models.SongDifficulty {
 	var difficulties []ddr_models.SongDifficulty
 	db.Model(&ddr_models.SongDifficulty{}).Scan(&difficulties)
 	return difficulties
@@ -123,6 +123,12 @@ func RetrieveSongDifficulties(db *gorm.DB) []ddr_models.SongDifficulty {
 func RetrieveValidSongDifficulties(db *gorm.DB) []ddr_models.SongDifficulty {
 	var difficulties []ddr_models.SongDifficulty
 	db.Model(&ddr_models.SongDifficulty{}).Where("difficulty_value > -1").Scan(&difficulties)
+	return difficulties
+}
+
+func RetrieveSongDifficultiesById(db *gorm.DB, ids []string) []ddr_models.SongDifficulty {
+	var difficulties []ddr_models.SongDifficulty
+	db.Model(&ddr_models.SongDifficulty{}).Where("song_id IN (?)", ids).Scan(&difficulties)
 	return difficulties
 }
 
@@ -151,6 +157,15 @@ func RetrieveDdrPlayerDetailsByEaGateUser(db *gorm.DB, eaUser string) (*ddr_mode
 	}
 	if len(results) > 1 {
 		return nil, fmt.Errorf("multiple ddr users found for username %s", eaUser)
+	}
+	return results[0], nil
+}
+
+func RetrieveDdrPlayerDetailsByCode(db *gorm.DB, code int) (*ddr_models.PlayerDetails, error) {
+	results := make([]*ddr_models.PlayerDetails, 0)
+	db.Model(&ddr_models.PlayerDetails{}).Where("code = ?", code).Scan(&results)
+	if len(results) == 0 {
+		return nil, fmt.Errorf("could not find user for code %s", code)
 	}
 	return results[0], nil
 }
