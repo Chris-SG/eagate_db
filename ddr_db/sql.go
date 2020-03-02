@@ -69,7 +69,7 @@ func RetrieveSongsWithCovers(db *gorm.DB, ids []string) []ddr_models.Song {
 
 
 func AddSongDifficulties(db *gorm.DB, difficulties []ddr_models.SongDifficulty) error {
-	allSongDifficulties := RetrieveSongDifficulties(db)
+	allSongDifficulties := RetrieveAllSongDifficulties(db)
 	fmt.Printf("range %d across %d", len(difficulties), len(allSongDifficulties))
 	for i := len(difficulties)-1; i >= 0; i-- {
 		for _, dbDifficulty := range allSongDifficulties {
