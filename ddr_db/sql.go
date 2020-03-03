@@ -61,6 +61,12 @@ func RetrieveSongsById(db *gorm.DB, ids []string) []ddr_models.Song {
 	return songs
 }
 
+func RetrieveOrderedSongsById(db *gorm.DB, ids []string, ordering string) []ddr_models.Song {
+	var songs []ddr_models.Song
+	db.Model(&ddr_models.Song{}).Select([]string{"id", "name", "artist"}).Where("id IN (?)", ids).Order(ordering).Scan(&songs)
+	return songs
+}
+
 func RetrieveSongsWithCovers(db *gorm.DB, ids []string) []ddr_models.Song {
 	var songs []ddr_models.Song
 	db.Model(&ddr_models.Song{}).Where("id IN (?)", ids).Scan(&songs)
