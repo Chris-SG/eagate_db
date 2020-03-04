@@ -186,7 +186,7 @@ func RetrieveLatestPlaycountDetails(db *gorm.DB, playerCode int) *ddr_models.Pla
 }
 
 func AddSongStatistics(db *gorm.DB, songStatistics []ddr_models.SongStatistics, code int) error {
-	allSongStatistics := RetrieveSongStatistics(db, code)
+	allSongStatistics := RetrieveAllSongStatistics(db, code)
 	for i := len(songStatistics)-1; i >= 0; i-- {
 		for _, dbStatistic := range allSongStatistics {
 			if songStatistics[i] == dbStatistic {
@@ -242,9 +242,15 @@ func AddSongStatistics(db *gorm.DB, songStatistics []ddr_models.SongStatistics, 
 	return nil
 }
 
-func RetrieveSongStatistics(db *gorm.DB, code int) []ddr_models.SongStatistics {
+func RetrieveAllSongStatistics(db *gorm.DB, code int) []ddr_models.SongStatistics {
 	var statistics []ddr_models.SongStatistics
 	db.Model(&ddr_models.SongStatistics{}).Where("player_code = ?", code).Scan(&statistics)
+	return statistics
+}
+
+func RetrieveSongStatisticsForSongsIds(db *gorm.DB, code int, songIds []string) []ddr_models.SongStatistics {
+	var statistics []ddr_models.SongStatistics
+	db.Model(&ddr_models.SongStatistics{}).Where("player_code = ? AND song_id IN (?)", code, songIds).Scan(&statistics)
 	return statistics
 }
 
@@ -285,4 +291,9 @@ func AddScores(db *gorm.DB, scores []ddr_models.Score) error {
 	}
 
 	return nil
+}
+
+func RetrieveScores(db *gorm.DB, code int, id string, mode string, difficulty string) (scores []ddr_models.Score) {
+	db.Model(&ddr_models.Score{}).Where("player_code = ? AND song_id = ? AND mode = ? AND difficulty = ?", code, id, mode, difficulty).Scan(&scores)
+	return
 }
