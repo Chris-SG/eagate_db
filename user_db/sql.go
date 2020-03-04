@@ -41,15 +41,16 @@ func RetrieveUserCookieById(db *gorm.DB, userId string) *http.Cookie {
 		return nil
 	}
 	timeNow := time.Now().UnixNano() / 1000
-	fmt.Printf("cookie is: %s\n%d vs %d\n", eaGateUser.Cookie, timeNow, eaGateUser.Expiration)
 	if len(eaGateUser.Cookie) == 0 || eaGateUser.Expiration < timeNow {
 		return nil
 	}
 	rawReq := fmt.Sprintf("GET / HTTP/1.0\r\nCookie: %s\r\n\r\n", eaGateUser.Cookie)
 	req, err := http.ReadRequest(bufio.NewReader(strings.NewReader(rawReq)))
 	if err != nil {
+		fmt.Println(err)
 		return nil
 	}
+	fmt.Println(req.Cookies())
 	return req.Cookies()[0]
 }
 
