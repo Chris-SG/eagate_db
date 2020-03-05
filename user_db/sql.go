@@ -41,6 +41,7 @@ func RetrieveUserCookieById(db *gorm.DB, userId string) *http.Cookie {
 		return nil
 	}
 	timeNow := time.Now().UnixNano() / 1000
+	fmt.Printf("cookie is: %s\n%d vs %d\n", eaGateUser.Cookie, timeNow, eaGateUser.Expiration)
 	if len(eaGateUser.Cookie) == 0 || eaGateUser.Expiration < timeNow {
 		return nil
 	}
