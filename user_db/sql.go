@@ -47,10 +47,8 @@ func RetrieveUserCookieById(db *gorm.DB, userId string) *http.Cookie {
 	rawReq := fmt.Sprintf("GET / HTTP/1.0\r\nCookie: %s\r\n\r\n", eaGateUser.Cookie)
 	req, err := http.ReadRequest(bufio.NewReader(strings.NewReader(rawReq)))
 	if err != nil {
-		fmt.Println(err)
 		return nil
 	}
-	fmt.Println(req.Cookies())
 	return req.Cookies()[0]
 }
 
