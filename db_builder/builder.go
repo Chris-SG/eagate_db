@@ -31,7 +31,8 @@ func createUserTables(db *gorm.DB) {
 func createDdrTables(db *gorm.DB) {
 	err := db.AutoMigrate(&ddr_models.Song{}, &ddr_models.SongDifficulty{},
 						  &ddr_models.PlayerDetails{}, &ddr_models.Playcount{},
-						  &ddr_models.Score{}, ddr_models.SongStatistics{}).
+						  &ddr_models.Score{}, ddr_models.SongStatistics{},
+						  &ddr_models.WorkoutData{}).
 			  Error
 	if err != nil {
 		fmt.Printf("error in AutoMigration: %s\n", err)
@@ -54,6 +55,13 @@ func createDdrConstraints(db *gorm.DB) {
 	}
 
 	err = db.Model(&ddr_models.Playcount{}).
+		AddForeignKey("player_code", "public.\"ddrPlayerDetails\"(code)", "RESTRICT", "RESTRICT").
+		Error
+	if err != nil {
+		fmt.Printf("error in FK creation: %s\n", err)
+	}
+
+	err = db.Model(&ddr_models.WorkoutData{}).
 		AddForeignKey("player_code", "public.\"ddrPlayerDetails\"(code)", "RESTRICT", "RESTRICT").
 		Error
 	if err != nil {
