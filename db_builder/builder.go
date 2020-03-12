@@ -2,6 +2,7 @@ package db_builder
 
 import (
 	"fmt"
+	"github.com/chris-sg/eagate_models/api_models"
 	"github.com/chris-sg/eagate_models/ddr_models"
 	"github.com/chris-sg/eagate_models/user_models"
 	"github.com/jinzhu/gorm"
@@ -14,6 +15,7 @@ func Create(db *gorm.DB) {
 
 func CreateTables(db *gorm.DB) {
 	createUserTables(db)
+	createApiTables(db)
 	createDdrTables(db)
 }
 
@@ -23,6 +25,13 @@ func CreateConstraints(db *gorm.DB) {
 
 func createUserTables(db *gorm.DB) {
 	err := db.AutoMigrate(&user_models.User{}).Error
+	if err != nil {
+		fmt.Printf("error in AutoMigration: %s\n", err)
+	}
+}
+
+func createApiTables(db *gorm.DB) {
+	err := db.AutoMigrate(&api_models.AutomaticJob{}).Error
 	if err != nil {
 		fmt.Printf("error in AutoMigration: %s\n", err)
 	}
