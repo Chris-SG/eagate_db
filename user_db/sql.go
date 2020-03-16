@@ -1,8 +1,6 @@
 package user_db
 
 import (
-	"bufio"
-	"fmt"
 	"github.com/chris-sg/eagate_models/user_models"
 	"github.com/jinzhu/gorm"
 	"net/http"
@@ -39,7 +37,7 @@ func RetrieveUserByWebId(db *gorm.DB, webUserId string) []user_models.User {
 	return users
 }
 
-func RetrieveUserCookieById(db *gorm.DB, userId string) *http.Cookie {
+func RetrieveUserCookieById(db *gorm.DB, userId string) *string {
 	userId = strings.ToLower(userId)
 	eaGateUser := RetrieveUserById(db, userId)
 	if eaGateUser == nil {
@@ -49,12 +47,7 @@ func RetrieveUserCookieById(db *gorm.DB, userId string) *http.Cookie {
 	if len(eaGateUser.Cookie) == 0 || eaGateUser.Expiration < timeNow {
 		return nil
 	}
-	rawReq := fmt.Sprintf("GET / HTTP/1.0\r\nCookie: %s\r\n\r\n", eaGateUser.Cookie)
-	req, err := http.ReadRequest(bufio.NewReader(strings.NewReader(rawReq)))
-	if err != nil {
-		return nil
-	}
-	return req.Cookies()[0]
+	return &eaGateUser.Cookie
 }
 
 func SetWebUserForUser(db *gorm.DB, userId string, webId string) {
