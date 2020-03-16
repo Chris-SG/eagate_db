@@ -6,6 +6,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/lib/pq"
 	"strconv"
+	"strings"
 )
 
 const maxBatchSize = 100
@@ -156,6 +157,7 @@ func AddPlaycountDetails(db *gorm.DB, playcountDetails ddr_models.Playcount) err
 }
 
 func RetrieveDdrPlayerDetailsByEaGateUser(db *gorm.DB, eaUser string) (*ddr_models.PlayerDetails, error) {
+	eaUser = strings.ToLower(eaUser)
 	results := make([]*ddr_models.PlayerDetails, 0)
 	db.Model(&ddr_models.PlayerDetails{}).Where("eagate_user = ?", eaUser).Scan(&results)
 	if len(results) == 0 {
