@@ -1,6 +1,7 @@
 package user_db
 
 import (
+	"fmt"
 	"github.com/chris-sg/eagate_models/user_models"
 	"github.com/jinzhu/gorm"
 	"net/http"
@@ -17,6 +18,9 @@ func SetCookieForUser(db *gorm.DB, userId string, cookie *http.Cookie) {
 	eaGateUser.Name = strings.ToLower(eaGateUser.Name)
 	eaGateUser.Cookie = cookie.String()
 	eaGateUser.Expiration = cookie.Expires.UnixNano() / 1000
+
+	fmt.Printf("Cookie: %s, cookie exp: %d, cookie exp2: %d", cookie.String(), eaGateUser.Expiration, cookie.Expires.UnixNano())
+
 	db.Save(eaGateUser)
 }
 

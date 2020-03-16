@@ -21,7 +21,6 @@ func AddSongs(db *gorm.DB, songs []ddr_models.Song) error {
 			}
 		}
 	}
-	fmt.Printf("%d songs to add\n", len(songs))
 	batchCount := 0
 	processedCount := 0
 	statements := make([]string, 0)
@@ -43,7 +42,6 @@ func AddSongs(db *gorm.DB, songs []ddr_models.Song) error {
 	}
 
 	for _, completeStatement := range statements {
-		fmt.Println(completeStatement)
 		db.Exec(completeStatement)
 	}
 	return nil
@@ -77,7 +75,6 @@ func RetrieveSongsWithCovers(db *gorm.DB, ids []string) []ddr_models.Song {
 
 func AddSongDifficulties(db *gorm.DB, difficulties []ddr_models.SongDifficulty) error {
 	allSongDifficulties := RetrieveAllSongDifficulties(db)
-	fmt.Printf("range %d across %d", len(difficulties), len(allSongDifficulties))
 	for i := len(difficulties)-1; i >= 0; i-- {
 		for _, dbDifficulty := range allSongDifficulties {
 			if difficulties[i] == dbDifficulty {
@@ -86,8 +83,6 @@ func AddSongDifficulties(db *gorm.DB, difficulties []ddr_models.SongDifficulty) 
 			}
 		}
 	}
-
-	fmt.Printf("%d difficulties to add.\n", len(difficulties))
 
 	batchCount := 0
 	processedCount := 0
@@ -115,7 +110,6 @@ func AddSongDifficulties(db *gorm.DB, difficulties []ddr_models.SongDifficulty) 
 	}
 
 	for _, completeStatement := range statements {
-		fmt.Println(completeStatement)
 		db.Exec(completeStatement)
 	}
 	return nil
@@ -140,7 +134,6 @@ func RetrieveSongDifficultiesById(db *gorm.DB, ids []string) []ddr_models.SongDi
 }
 
 func AddPlayerDetails(db *gorm.DB, playerDetails ddr_models.PlayerDetails) error {
-	fmt.Println(playerDetails)
 	err := db.Save(&playerDetails).Error
 	if err != nil {
 		return err
@@ -257,8 +250,6 @@ func RetrieveSongStatisticsForSongsIds(db *gorm.DB, code int, songIds []string) 
 }
 
 func AddScores(db *gorm.DB, scores []ddr_models.Score) error {
-	fmt.Printf("%d scores\n", len(scores))
-
 	batchCount := 0
 	processedCount := 0
 	statements := make([]string, 0)
@@ -288,7 +279,6 @@ func AddScores(db *gorm.DB, scores []ddr_models.Score) error {
 	}
 
 	for _, completeStatement := range statements {
-		fmt.Println(completeStatement)
 		db.Exec(completeStatement)
 	}
 
