@@ -289,3 +289,32 @@ func RetrieveScores(db *gorm.DB, code int, id string, mode string, difficulty st
 	db.Model(&ddr_models.Score{}).Where("player_code = ? AND song_id = ? AND mode = ? AND difficulty = ?", code, id, mode, difficulty).Scan(&scores)
 	return
 }
+
+func AddWorkoutData(db *gorm.DB, workoutData []ddr_models.WorkoutData) {
+	processedCount := 0
+	var statement string
+	statementBegin := `INSERT INTO public."ddrWorkoutData" VALUES `
+	statementEnd := ` ON CONFLICT (date, player_code,) DO UPDATE SET playcount=EXCLUDED.playcount, kcal=EXCLUDED.kcal;`
+	for i, _ := range workoutData {
+		statement = fmt.Sprintf("%s ('%s', '%s', '%s', %d)",
+			statement,
+			workoutData[i].Date,
+			workoutData[i].PlayCount,
+			workoutData[i].Kcal,
+			workoutData[i].PlayerCode)
+
+		processedCount++
+		if processedCount >= len(workoutData) {
+			statement = fmt.Sprintf("%s%s%s", statementBegin, statement, statementEnd)
+		} else {
+			statement = fmt.Sprintf("%s,", statement)
+		}
+	}
+
+	db.Exec(statement)
+}
+
+func RetrieveWorkoutData(db *gorm.DB, code int) (workoutData []ddr_models.WorkoutData) {
+	db.Model(&ddr_models.WorkoutData{}).Where("player_code = ?", code).Scan(&workoutData)
+	return
+}
