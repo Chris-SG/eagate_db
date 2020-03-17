@@ -294,11 +294,11 @@ func AddWorkoutData(db *gorm.DB, workoutData []ddr_models.WorkoutData) {
 	processedCount := 0
 	var statement string
 	statementBegin := `INSERT INTO public."ddrWorkoutData" VALUES `
-	statementEnd := ` ON CONFLICT (date, player_code,) DO UPDATE SET playcount=EXCLUDED.playcount, kcal=EXCLUDED.kcal;`
+	statementEnd := ` ON CONFLICT (date, player_code) DO UPDATE SET playcount=EXCLUDED.playcount, kcal=EXCLUDED.kcal;`
 	for i, _ := range workoutData {
-		statement = fmt.Sprintf("%s ('%s', '%s', '%s', %d)",
+		statement = fmt.Sprintf("%s ('%s', '%d', '%f', %d)",
 			statement,
-			workoutData[i].Date,
+			pq.FormatTimestamp(workoutData[i].Date),
 			workoutData[i].PlayCount,
 			workoutData[i].Kcal,
 			workoutData[i].PlayerCode)
