@@ -1,6 +1,7 @@
 package ddr_db
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/chris-sg/eagate_models/ddr_models"
 	"github.com/golang/glog"
@@ -105,8 +106,11 @@ func AddSongDifficulties(db *gorm.DB, difficulties []ddr_models.SongDifficulty) 
 	allSongDifficulties := RetrieveAllSongDifficulties(db)
 	for i := len(difficulties)-1; i >= 0; i-- {
 		for _, dbDifficulty := range allSongDifficulties {
-			if difficulties[i] == dbDifficulty {
-				difficulties = append(difficulties[:i], difficulties[i+1:]...)
+			if  difficulties[i].SongId == dbDifficulty.SongId &&
+				difficulties[i].Mode == dbDifficulty.Mode &&
+				difficulties[i].Difficulty == dbDifficulty.Difficulty &&
+				difficulties[i].DifficultyValue == dbDifficulty.DifficultyValue {
+					difficulties = append(difficulties[:i], difficulties[i+1:]...)
 				break
 			}
 		}
@@ -366,6 +370,7 @@ func AddScores(db *gorm.DB, scores []ddr_models.Score) error {
 		err := db.Exec(completeStatement).Error
 		if err != nil {
 			glog.Errorf("AddScores statement failed: %s\n", err.Error())
+			glog.Errorf("Statement: %s\n", completeStatement)
 		} else {
 			totalRowsAffected += db.RowsAffected
 		}
@@ -422,4 +427,59 @@ func RetrieveWorkoutData(db *gorm.DB, code int) (workoutData []ddr_models.Workou
 	}
 	glog.Infof("RetrieveWorkoutData for player code %d: %d data points\n", code, len(workoutData))
 	return
+}
+
+func RetrieveScoreStatisticsExtendedData(db *gorm.DB, code int) string {
+	type DdrStatisticsTable struct {
+		Level int `json:"level"`
+		Title string `json:"title"`
+		Artist string `json:"artist"`
+		Mode string `json:"mode"`
+		Difficulty string `json:"difficulty"`
+		Lamp int `json:"lamp"`
+		Rank string `json:"rank"`
+		Score int `json:"score"`
+		PlayCount int `json:"playcount"`
+		ClearCount int `json:"clearcount"`
+		MaxCombo int `json:"maxcombo"`
+	}
+	query := `select
+	diff.difficulty_value as level,
+	song.name as title,
+	song.artist as artist,
+	diff.mode as mode,
+	diff.difficulty as difficulty,
+	stat.clear_lamp as lamp,
+	stat.rank as rank,
+	stat.score_record as score,
+	stat.playcount as playcount,
+	stat.clearcount as clearcount,
+	stat.maxcombo as maxcombo
+from public."ddrSongDifficulties" as diff
+inner join public."ddrSongs" as song on diff.song_id = song.id
+left outer join public."ddrSongStatistics" as stat on 
+	diff.song_id = stat.song_id
+	and diff.mode = stat.mode
+	and diff.difficulty = stat.difficulty
+	and stat.player_code = ?
+where diff.difficulty_value != -1
+order by diff.mode desc, diff.difficulty_value;`
+
+	stats := make([]DdrStatisticsTable, 0)
+	glog.Infoln(query)
+
+	errors := db.Raw(query, code).Scan(&stats).GetErrors()
+	if len(errors) > 0 {
+		glog.Errorf("failed to load extended statistics for code %d:\n", code)
+		for _, e := range errors {
+			glog.Errorf("%s\n", e.Error())
+		}
+		return ""
+	}
+	result, err := json.Marshal(stats)
+	if err != nil {
+		glog.Errorf("failed to load extended statistics for code %d: %s\n", code, err.Error())
+		return ""
+	}
+	return string(result)
 }
