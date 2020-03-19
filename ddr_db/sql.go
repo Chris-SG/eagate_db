@@ -439,9 +439,9 @@ func RetrieveScoreStatisticsExtendedData(db *gorm.DB, code int) string {
 		Lamp string `json:"lamp"`
 		Rank string `json:"rank"`
 		Score int `json:"score"`
-		PlayCount int `json:"playcount"`
-		ClearCount int `json:"clearcount"`
-		MaxCombo int `json:"maxcombo"`
+		PlayCount int `gorm:"column:playcount" json:"playcount"`
+		ClearCount int `gorm:"column:clearcount" json:"clearcount"`
+		MaxCombo int `gorm:"column:maxcombo" json:"maxcombo"`
 	}
 	query := `select
 	diff.difficulty_value as level,
