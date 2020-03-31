@@ -530,7 +530,7 @@ func (dbcomm DdrDbCommunicationPostgres) RetrieveScoresByPlayerCodeForSong(code 
 }
 
 func (dbcomm DdrDbCommunicationPostgres) RetrieveScoresByPlayerCodeForChart(code int, songId string, mode string, difficulty string) (scores []ddr_models.Score, errs []error) {
-	glog.Infof("RetrieveScoresByPlayerCodeForChart for player code %d songId %s mode %s difficulty %s\n", code, songId, mode.String(), difficulty.String())
+	glog.Infof("RetrieveScoresByPlayerCodeForChart for player code %d songId %s mode %s difficulty %s\n", code, songId, mode, difficulty)
 	resultDb := dbcomm.db.Model(&ddr_models.Score{}).Where("player_code = ? AND song_id = ? AND mode = ? AND difficulty = ?", code, songId, mode, difficulty).Scan(&scores)
 
 	errors := resultDb.GetErrors()
