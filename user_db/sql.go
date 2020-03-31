@@ -65,7 +65,7 @@ func (dbcomm UserDbCommunicationPostgres) RetrieveUserByUserId(userId string) (u
 func (dbcomm UserDbCommunicationPostgres) RetrieveUserByWebId(webUserId string) (user user_models.User, errs []error) {
 	glog.Infof("RetrieveUserByWebId for web id %s\n", webUserId)
 	webUserId = strings.ToLower(webUserId)
-	resultDb := dbcomm.db.Model(&user_models.User{}).Where("account_name = ?", webUserId).First(&user)
+	resultDb := dbcomm.db.Model(&user_models.User{}).Where("web_user = ?", webUserId).First(&user)
 
 	errors := resultDb.GetErrors()
 	if errors != nil && len(errors) != 0 {
