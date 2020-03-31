@@ -14,6 +14,7 @@ import (
 type DdrDbCommunication interface {
 	AddSongs(songs []ddr_models.Song) (errs []error)
 	RetrieveSongIds() (songIds []string, errs []error)
+	RetrieveSongByIdWithJacket(songId string) (song ddr_models.Song, errs []error)
 	RetrieveSongsById(songIds []string) (songs []ddr_models.Song, errs []error)
 	RetrieveOrderedSongsById(songIds []string, ordering string) (songs []ddr_models.Song, errs []error)
 	RetrieveJacketsForSongIds(songIds []string) (jackets map[string] string, errs []error)
@@ -118,6 +119,16 @@ func (dbcomm DdrDbCommunicationPostgres) RetrieveSongIds() (songIds []string, er
 func (dbcomm DdrDbCommunicationPostgres) RetrieveSongsById(songIds []string) (songs []ddr_models.Song, errs []error) {
 	glog.Infof("RetrieveSongsByIds for %d ids\n", len(songIds))
 	resultDb := dbcomm.db.Model(&ddr_models.Song{}).Select([]string{"id", "name", "artist"}).Where("id IN (?)", songIds).Scan(&songs)
+	errors := resultDb.GetErrors()
+	if errors != nil && len(errors) != 0 {
+		errs = append(errs, errors...)
+	}
+	return
+}
+
+func (dbcomm DdrDbCommunicationPostgres) RetrieveSongByIdWithJacket(songId string) (song ddr_models.Song, errs []error) {
+	glog.Infof("RetrieveSongsByIds for %s\n", songId)
+	resultDb := dbcomm.db.Model(&ddr_models.Song{}).Where("id = ?", songId).First(&song)
 	errors := resultDb.GetErrors()
 	if errors != nil && len(errors) != 0 {
 		errs = append(errs, errors...)
