@@ -68,6 +68,10 @@ func GetDdrDb() ddr_db.DdrDbCommunication {
 	return ddrDbComm
 }
 
+func GetMigrator() db_builder.DbMigrator {
+	return migrator
+}
+
 func GetUserDb() user_db.UserDbCommunication {
 	return userDbComm
 }
