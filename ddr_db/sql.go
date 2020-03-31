@@ -41,7 +41,7 @@ type DdrDbCommunication interface {
 	AddScores(scores []ddr_models.Score) (errs []error)
 	RetrieveScoresByPlayerCode(code int) (scores []ddr_models.Score, errs []error)
 	RetrieveScoresByPlayerCodeForSong(code int, songId string) (scores []ddr_models.Score, errs []error)
-	RetrieveScoresByPlayerCodeForChart(code int, songId string, mode ddr_models.Mode, difficulty ddr_models.Difficulty) (scores []ddr_models.Score, errs []error)
+	RetrieveScoresByPlayerCodeForChart(code int, songId string, mode string, difficulty string) (scores []ddr_models.Score, errs []error)
 
 	AddWorkoutData(workoutData []ddr_models.WorkoutData) (errs []error)
 	RetrieveWorkoutDataByPlayerCode(code int) (workoutData []ddr_models.WorkoutData, errs []error)
@@ -529,7 +529,7 @@ func (dbcomm DdrDbCommunicationPostgres) RetrieveScoresByPlayerCodeForSong(code 
 	return
 }
 
-func (dbcomm DdrDbCommunicationPostgres) RetrieveScoresByPlayerCodeForChart(code int, songId string, mode ddr_models.Mode, difficulty ddr_models.Difficulty) (scores []ddr_models.Score, errs []error) {
+func (dbcomm DdrDbCommunicationPostgres) RetrieveScoresByPlayerCodeForChart(code int, songId string, mode string, difficulty string) (scores []ddr_models.Score, errs []error) {
 	glog.Infof("RetrieveScoresByPlayerCodeForChart for player code %d songId %s mode %s difficulty %s\n", code, songId, mode.String(), difficulty.String())
 	resultDb := dbcomm.db.Model(&ddr_models.Score{}).Where("player_code = ? AND song_id = ? AND mode = ? AND difficulty = ?", code, songId, mode, difficulty).Scan(&scores)
 
