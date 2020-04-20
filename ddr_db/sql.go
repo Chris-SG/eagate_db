@@ -357,8 +357,8 @@ func (dbcomm DdrDbCommunicationPostgres) RetrieveLatestPlaycountByPlayerCode(cod
 
 func (dbcomm DdrDbCommunicationPostgres) RetrievePlaycountsByPlayerCodeInDateRange(code int, daysAgoFrom int, daysAgoTo int) (playcounts []ddr_models.Playcount, errs []error) {
 	glog.Infof("RetrievePlaycountsByPlayerCodeInDateRange for playerCode %d range %d-%d\n", code, daysAgoFrom, daysAgoTo)
-	resultDb := dbcomm.db.Model(&ddr_models.Playcount{}).Where(fmt.Sprintf("player_code = ? AND" +
-		"date between (now() - '%d days'::interval) and (now() - '%d days'::interval", daysAgoFrom, daysAgoTo), code).Scan(&playcounts)
+	resultDb := dbcomm.db.Model(&ddr_models.Playcount{}).Where(fmt.Sprintf("player_code = ? AND " +
+		"date between (now() - '%d days'::interval) and (now() - '%d days'::interval)", daysAgoFrom, daysAgoTo), code).Scan(&playcounts)
 
 	errors := resultDb.GetErrors()
 	if errors != nil && len(errors) != 0 {
@@ -586,8 +586,8 @@ func (dbcomm DdrDbCommunicationPostgres) RetrieveWorkoutDataByPlayerCode(code in
 func (dbcomm DdrDbCommunicationPostgres) RetrieveWorkoutDataByPlayerCodeInDateRange(code int, daysAgoFrom int, daysAgoTo int) (workoutData []ddr_models.WorkoutData, errs []error) {
 	glog.Infof("RetrieveWorkoutDataByPlayerCodeInDateRange for player code %d days ago %d to %d\n", code, daysAgoFrom, daysAgoTo)
 	resultDb := dbcomm.db.Model(&ddr_models.WorkoutData{}).Where(
-		fmt.Sprintf("player_code = ? AND" +
-			"date between (now() - '%d days'::interval) and (now() - '%d days'::interval", daysAgoFrom, daysAgoTo), code).Scan(&workoutData)
+		fmt.Sprintf("player_code = ? AND " +
+			"date between (now() - '%d days'::interval) and (now() - '%d days'::interval)", daysAgoFrom, daysAgoTo), code).Scan(&workoutData)
 
 	errors := resultDb.GetErrors()
 	if errors != nil && len(errors) != 0 {
