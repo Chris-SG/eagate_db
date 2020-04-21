@@ -307,14 +307,15 @@ func (dbcomm DdrDbCommunicationPostgres) AddPlaycounts(playcountDetails []ddr_mo
 	statementBegin := `INSERT INTO public."ddrPlaycount" VALUES `
 	statementEnd := ` ON CONFLICT (last_play_date, player_code) do nothing;`
 	for _, playcount := range playcountDetails {
-		statement = fmt.Sprintf("%s (%d, '%s', %d, '%s', %d, '%s')",
+		statement = fmt.Sprintf("%s (%d, '%s', %d, '%s', %d, '%s', %d)",
 			statement,
 			playcount.Playcount,
 			pq.FormatTimestamp(playcount.LastPlayDate),
 			playcount.SinglePlaycount,
 			pq.FormatTimestamp(playcount.SingleLastPlayDate),
 			playcount.DoublePlaycount,
-			pq.FormatTimestamp(playcount.DoubleLastPlayDate))
+			pq.FormatTimestamp(playcount.DoubleLastPlayDate),
+			playcount.PlayerCode)
 
 		processedCount++
 		if processedCount >= len(playcountDetails) {
