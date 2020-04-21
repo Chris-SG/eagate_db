@@ -87,7 +87,8 @@ func (dbcomm UserDbCommunicationPostgres) RetrieveUserCookieStringByUserId(userI
 		errs = append(errs, fmt.Errorf("cookie for user id %s was not found or expired", userId))
 		return
 	}
-	glog.Infof("RetrieveUserCookieById: retrieved cookie for user id %d\n", userId)
+	cookie = eaGateUser.Cookie
+	glog.Infof("RetrieveUserCookieById: retrieved cookie for user id %s\n", userId)
 	return
 }
 
