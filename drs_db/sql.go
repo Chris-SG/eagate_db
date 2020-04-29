@@ -91,7 +91,6 @@ func (dbcomm DrsDbCommunicationPostgres) AddSongs(songs []drs_models.Song) (errs
 
 	totalRowsAffected := int64(0)
 	for _, completeStatement := range statements {
-		fmt.Println(completeStatement)
 		resultDb := dbcomm.db.Exec(completeStatement)
 		errors := resultDb.GetErrors()
 		if errors != nil && len(errors) != 0 {
@@ -180,7 +179,7 @@ func (dbcomm DrsDbCommunicationPostgres) AddPlayerSongStats(stats []drs_models.P
 		`p1_bads=EXCLUDED.p1_bads, ` +
 		`p2_code=EXCLUDED.p2_code, ` +
 		`p2_score=EXCLUDED.p2_score, ` +
-		`P2Perfects=EXCLUDED.p2_perfects, ` +
+		`p2_perfects=EXCLUDED.p2_perfects, ` +
 		`p2_greats=EXCLUDED.p2_greats, ` +
 		`p2_goods=EXCLUDED.p2_goods, ` +
 		`p2_bads=EXCLUDED.p2_bads;`
@@ -262,10 +261,10 @@ func (dbcomm DrsDbCommunicationPostgres) AddPlayerScores(scores []drs_models.Pla
 	processedCount := 0
 	statements := make([]string, 0)
 	var statement string
-	statementBegin := `INSERT INTO public."drsScores" VALUES `
+	statementBegin := `INSERT INTO public."drsPlayerScores" VALUES `
 	statementEnd := ` ON CONFLICT DO NOTHING;`
 	for i := range scores {
-		statement = fmt.Sprintf("%s ('%s', %d, %d, %d, '%s', %d, %d, %d, %d, %d, %d)",
+		statement = fmt.Sprintf("%s ('%s', %d, %d, %d, '%s', %d, %d, %d, %d, %d, %d",
 			statement,
 			cleanString(scores[i].Shop),
 			scores[i].Score,
@@ -318,6 +317,7 @@ func (dbcomm DrsDbCommunicationPostgres) AddPlayerScores(scores []drs_models.Pla
 
 	totalRowsAffected := int64(0)
 	for _, completeStatement := range statements {
+		fmt.Println(completeStatement)
 		resultDb := dbcomm.db.Exec(completeStatement)
 		errors := resultDb.GetErrors()
 		if errors != nil && len(errors) != 0 {
