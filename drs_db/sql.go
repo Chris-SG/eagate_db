@@ -17,7 +17,14 @@ type DrsDbCommunication interface {
 	AddPlayerSongStats(stats []drs_models.PlayerSongStats) (errs []error)
 	AddPlayerScores(scores []drs_models.PlayerScore) (errs []error)
 
+	RetrievePlayerDetailsByPlayerCode(code int) (details drs_models.PlayerDetails, errs []error)
+	RetrievePlayerDetailsByEaGateUser(eaUser string) (details drs_models.PlayerDetails, errs []error)
+	RetrieveRecentPlayerProfileSnapshot(code int) (snapshot drs_models.PlayerProfileSnapshot, errs []error)
+	//RetrievePlayerProfileSnapshots(code int, dateFrom time.Time, dateTo time.Time) (snapshots []drs_models.PlayerProfileSnapshot, errs []error)
+	//RetrieveSongs() (songs []drs_models.Song, errs []error)
+	//RetrieveDifficulties(songs []drs_models.Song) (difficulties []drs_models.Difficulty, errs []error)
 	RetrieveSongStatisticsByPlayerCode(code int) (stats []drs_models.PlayerSongStats, errs []error)
+	//RetrievePlayerScores(code int) (scores []drs_models.PlayerScore, errs []error)
 }
 
 func CreateDrsDbCommunicationPostgres(db *gorm.DB) DrsDbCommunicationPostgres {
@@ -244,17 +251,6 @@ func (dbcomm DrsDbCommunicationPostgres) AddPlayerSongStats(stats []drs_models.P
 	return nil
 }
 
-func (dbcomm DrsDbCommunicationPostgres) RetrieveSongStatisticsByPlayerCode(code int) (stats []drs_models.PlayerSongStats, errs []error) {
-	glog.Infof("RetrieveSongStatisticsByPlayerCode for player code %d\n", code)
-	resultDb := dbcomm.db.Model(&drs_models.PlayerSongStats{}).Where("player_code = ?", code).Scan(&stats)
-
-	errors := resultDb.GetErrors()
-	if errors != nil && len(errors) != 0 {
-		errs = append(errs, errors...)
-	}
-	return
-}
-
 func (dbcomm DrsDbCommunicationPostgres) AddPlayerScores(scores []drs_models.PlayerScore) (errs []error) {
 	glog.Infof("AddPlayerScores with %d scores\n", len(scores))
 	batchCount := 0
@@ -327,6 +323,51 @@ func (dbcomm DrsDbCommunicationPostgres) AddPlayerScores(scores []drs_models.Pla
 	}
 	glog.Infof("AddPlayerScores: %d rows affected\n", totalRowsAffected)
 
+	return
+}
+
+
+func (dbcomm DrsDbCommunicationPostgres) RetrievePlayerDetailsByPlayerCode(code int) (details drs_models.PlayerDetails, errs []error) {
+	glog.Infof("Retrieve player details for code %d\n", code)
+	resultDb := dbcomm.db.Model(&drs_models.PlayerDetails{}).Where("player_code = ?", code).First(&details)
+
+	errors := resultDb.GetErrors()
+	if errors != nil && len(errors) != 0 {
+		errs = append(errs, errors...)
+	}
+	return
+}
+
+func (dbcomm DrsDbCommunicationPostgres) RetrievePlayerDetailsByEaGateUser(eaUser string) (details drs_models.PlayerDetails, errs []error) {
+	glog.Infof("Retrieve player details for eauser %s\n", eaUser)
+	resultDb := dbcomm.db.Model(&drs_models.PlayerDetails{}).Where("eagate_user = ?", eaUser).First(&details)
+
+	errors := resultDb.GetErrors()
+	if errors != nil && len(errors) != 0 {
+		errs = append(errs, errors...)
+	}
+	return
+}
+
+func (dbcomm DrsDbCommunicationPostgres) RetrieveRecentPlayerProfileSnapshot(code int) (snapshot drs_models.PlayerProfileSnapshot, errs []error) {
+	glog.Infof("Retrieve recent snapshot for code %d\n", code)
+	resultDb := dbcomm.db.Model(&drs_models.PlayerProfileSnapshot{}).Where("player_code = ?", code).Order("play_count desc").First(&snapshot)
+
+	errors := resultDb.GetErrors()
+	if errors != nil && len(errors) != 0 {
+		errs = append(errs, errors...)
+	}
+	return
+}
+
+func (dbcomm DrsDbCommunicationPostgres) RetrieveSongStatisticsByPlayerCode(code int) (stats []drs_models.PlayerSongStats, errs []error) {
+	glog.Infof("RetrieveSongStatisticsByPlayerCode for player code %d\n", code)
+	resultDb := dbcomm.db.Model(&drs_models.PlayerSongStats{}).Where("player_code = ?", code).Scan(&stats)
+
+	errors := resultDb.GetErrors()
+	if errors != nil && len(errors) != 0 {
+		errs = append(errs, errors...)
+	}
 	return
 }
 

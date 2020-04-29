@@ -80,7 +80,7 @@ func (dbcomm DdrDbCommunicationPostgres) AddSongs(songs []ddr_models.Song) (errs
 	statementBegin := `INSERT INTO public."ddrSongs" VALUES `
 	statementEnd := ` ON CONFLICT DO NOTHING;`
 	for i := len(songs)-1; i >= 0; i-- {
-		statement = fmt.Sprintf("%s ('%s', '%s', '%s', '%s')", statement, songs[i].Id, songs[i].Name, songs[i].Artist, songs[i].Image)
+		statement = fmt.Sprintf("%s ('%s', '%s', '%s', '%s')", statement, songs[i].Id, cleanString(songs[i].Name), cleanString(songs[i].Artist), songs[i].Image)
 		songs = songs[:len(songs)-1]
 		batchCount++
 		processedCount++
@@ -650,4 +650,8 @@ order by diff.mode desc, diff.difficulty_value;`
 	}
 	statisticsJson = string(result)
 	return
+}
+
+func cleanString(in string) string {
+	return strings.ReplaceAll(in, "'", "&#39;")
 }
