@@ -6,6 +6,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/jinzhu/gorm"
 	"github.com/lib/pq"
+	"strings"
 )
 
 type DrsDbCommunication interface {
@@ -68,14 +69,14 @@ func (dbcomm DrsDbCommunicationPostgres) AddSongs(songs []drs_models.Song) (errs
 		statement = fmt.Sprintf("%s ('%s', '%s', '%s', %d, %d, %d, %d, %d, '%s')",
 			statement,
 			songs[i].SongId,
-			songs[i].SongName,
-			songs[i].ArtistName,
+			cleanString(songs[i].SongName),
+			cleanString(songs[i].ArtistName),
 			songs[i].MaxBpm,
 			songs[i].MinBpm,
 			songs[i].LimitationType,
 			songs[i].Genre,
 			songs[i].VideoFlags,
-			songs[i].License)
+			cleanString(songs[i].License))
 		songs = songs[:len(songs)-1]
 		batchCount++
 		processedCount++
@@ -266,7 +267,7 @@ func (dbcomm DrsDbCommunicationPostgres) AddPlayerScores(scores []drs_models.Pla
 	for i := range scores {
 		statement = fmt.Sprintf("%s ('%s', %d, %d, %d, '%s', %d, %d, %d, %d, %d, %d)",
 			statement,
-			scores[i].Shop,
+			cleanString(scores[i].Shop),
 			scores[i].Score,
 			scores[i].MaxCombo,
 			scores[i].Param,
@@ -327,4 +328,9 @@ func (dbcomm DrsDbCommunicationPostgres) AddPlayerScores(scores []drs_models.Pla
 	glog.Infof("AddPlayerScores: %d rows affected\n", totalRowsAffected)
 
 	return
+}
+
+
+func cleanString(in string) string {
+	return strings.ReplaceAll(in, "'", "&#39;")
 }
