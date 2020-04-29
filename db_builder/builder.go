@@ -3,6 +3,7 @@ package db_builder
 import (
 	"github.com/chris-sg/eagate_models/api_models"
 	"github.com/chris-sg/eagate_models/ddr_models"
+	"github.com/chris-sg/eagate_models/drs_models"
 	"github.com/chris-sg/eagate_models/user_models"
 	"github.com/golang/glog"
 	"github.com/jinzhu/gorm"
@@ -16,7 +17,9 @@ type DbMigrator interface {
 	createUserTables()
 	createApiTables()
 	createDdrTables()
+	createDrsTables()
 	createDdrConstraints()
+	createDrsConstraints()
 }
 
 func CreateDbMigratorPostgres(db *gorm.DB) DbMigratorPostgres {
@@ -38,11 +41,13 @@ func (migrator DbMigratorPostgres) CreateTables() {
 	migrator.createUserTables()
 	migrator.createApiTables()
 	migrator.createDdrTables()
+	migrator.createDrsTables()
 }
 
 func (migrator DbMigratorPostgres) CreateConstraints() {
 	glog.Infoln("creating db constraints")
 	migrator.createDdrConstraints()
+	migrator.createDrsConstraints()
 }
 
 func (migrator DbMigratorPostgres) createUserTables() {
@@ -156,6 +161,79 @@ func (migrator DbMigratorPostgres) createDdrConstraints() {
 		GetErrors()
 	if errs != nil && len(errs) > 0 {
 		glog.Warningln("fk creation for ddr_models.Score contained errors:")
+		for _, err := range errs {
+			glog.Warningf("\t%s\n", err.Error())
+		}
+	}
+}
+
+func (migrator DbMigratorPostgres) createDrsTables() {
+	errs := migrator.db.AutoMigrate(&drs_models.PlayerDetails{}, &drs_models.Difficulty{},
+		&drs_models.DancerInfo{}, &drs_models.PlayerScore{},
+		&drs_models.PlayerSongStats{}, &drs_models.Song{},
+		&drs_models.PlayerProfileSnapshot{}, &drs_models.PlayHist{},
+		&drs_models.MusicData{}).
+		GetErrors()
+	if errs != nil && len(errs) > 0 {
+		glog.Warningln("automigration for drs tables contained errors:")
+		for _, err := range errs {
+			glog.Warningf("\t%s\n", err.Error())
+		}
+	}
+}
+
+func (migrator DbMigratorPostgres) createDrsConstraints() {
+	errs := migrator.db.Model(&drs_models.PlayerDetails{}).
+		AddForeignKey("eagate_user", "public.\"eaGateUser\"(account_name)", "RESTRICT", "RESTRICT").
+		GetErrors()
+	if errs != nil && len(errs) > 0 {
+		glog.Warningln("fk creation for drs_models.PlayerDetails contained errors:")
+		for _, err := range errs {
+			glog.Warningf("\t%s\n", err.Error())
+		}
+	}
+
+	errs = migrator.db.Model(&drs_models.PlayerProfileSnapshot{}).
+		AddForeignKey("player_code", "public.\"drsPlayerDetails\"(code)", "RESTRICT", "RESTRICT").
+		GetErrors()
+	if errs != nil && len(errs) > 0 {
+		glog.Warningln("fk creation for drs_models.PlayerProfileSnapshot contained errors:")
+		for _, err := range errs {
+			glog.Warningf("\t%s\n", err.Error())
+		}
+	}
+
+	errs = migrator.db.Model(&drs_models.Difficulty{}).
+		AddForeignKey("song_id", "public.\"drsSongs\"(song_id)", "CASCADE", "CASCADE").
+		GetErrors()
+	if errs != nil && len(errs) > 0 {
+		glog.Warningln("fk creation for drs_models.Difficulty contained errors:")
+		for _, err := range errs {
+			glog.Warningf("\t%s\n", err.Error())
+		}
+	}
+
+	errs = migrator.db.Model(&drs_models.PlayerSongStats{}).
+		AddForeignKey("player_code", "public.\"drsPlayerDetails\"(code)", "RESTRICT", "RESTRICT").
+		AddForeignKey("song_id", "public.\"drsSongs\"(song_id)", "CASCADE", "CASCADE").
+		AddForeignKey("mode", "public.\"drsDifficulties\"(mode)", "RESTRICT", "RESTRICT").
+		AddForeignKey("difficulty", "public.\"drsDifficulties\"(difficulty)", "RESTRICT", "RESTRICT").
+		GetErrors()
+	if errs != nil && len(errs) > 0 {
+		glog.Warningln("fk creation for drs_models.PlayerSongStats contained errors:")
+		for _, err := range errs {
+			glog.Warningf("\t%s\n", err.Error())
+		}
+	}
+
+	errs = migrator.db.Model(&drs_models.PlayerScore{}).
+		AddForeignKey("player_code", "public.\"drsPlayerDetails\"(code)", "RESTRICT", "RESTRICT").
+		AddForeignKey("song_id", "public.\"drsSongs\"(song_id)", "CASCADE", "CASCADE").
+		AddForeignKey("mode", "public.\"drsDifficulties\"(mode)", "RESTRICT", "RESTRICT").
+		AddForeignKey("difficulty", "public.\"drsDifficulties\"(difficulty)", "RESTRICT", "RESTRICT").
+		GetErrors()
+	if errs != nil && len(errs) > 0 {
+		glog.Warningln("fk creation for drs_models.PlayerScore contained errors:")
 		for _, err := range errs {
 			glog.Warningf("\t%s\n", err.Error())
 		}

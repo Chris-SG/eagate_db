@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/chris-sg/eagate_db/db_builder"
 	"github.com/chris-sg/eagate_db/ddr_db"
+	"github.com/chris-sg/eagate_db/drs_db"
 	"github.com/chris-sg/eagate_db/user_db"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -12,6 +13,7 @@ import (
 var (
 	db *gorm.DB
 	ddrDbComm ddr_db.DdrDbCommunication
+	drsDbComm drs_db.DrsDbCommunication
 	idleConnectionLimit int
 	migrator db_builder.DbMigrator
 	userDbComm user_db.UserDbCommunication
@@ -51,6 +53,7 @@ func openDbPostgres(user string, password string, dbname string, host string, ma
 	idleConnectionLimit = maxIdleConnections
 
 	ddrDbComm = ddr_db.CreateDdrDbCommunicationPostgres(db)
+	drsDbComm = drs_db.CreateDrsDbCommunicationPostgres(db)
 	migrator = db_builder.CreateDbMigratorPostgres(db)
 	userDbComm = user_db.CreateUserDbCommunicationPostgres(db)
 
@@ -66,6 +69,10 @@ func GetDb() (*gorm.DB, error) {
 
 func GetDdrDb() ddr_db.DdrDbCommunication {
 	return ddrDbComm
+}
+
+func GetDrsDb() drs_db.DrsDbCommunication {
+	return drsDbComm
 }
 
 func GetMigrator() db_builder.DbMigrator {
