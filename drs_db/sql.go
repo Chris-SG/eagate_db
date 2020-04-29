@@ -65,7 +65,17 @@ func (dbcomm DrsDbCommunicationPostgres) AddSongs(songs []drs_models.Song) (errs
 	statementBegin := `INSERT INTO public."drsSongs" VALUES `
 	statementEnd := ` ON CONFLICT DO NOTHING;`
 	for i := len(songs) - 1; i >= 0; i-- {
-		statement = fmt.Sprintf("%s ('%s', '%s', '%s', %d, %d, %d, %d, %d, '%s')", statement, songs[i].SongId, songs[i].SongName, songs[i].ArtistName, songs[i].MaxBpm, songs[i].MinBpm, songs[i].LimitationType, songs[i].Genre, songs[i].VideoFlags, songs[i].License)
+		statement = fmt.Sprintf("%s ('%s', '%s', '%s', %d, %d, %d, %d, %d, '%s')",
+			statement,
+			songs[i].SongId,
+			songs[i].SongName,
+			songs[i].ArtistName,
+			songs[i].MaxBpm,
+			songs[i].MinBpm,
+			songs[i].LimitationType,
+			songs[i].Genre,
+			songs[i].VideoFlags,
+			songs[i].License)
 		songs = songs[:len(songs)-1]
 		batchCount++
 		processedCount++
