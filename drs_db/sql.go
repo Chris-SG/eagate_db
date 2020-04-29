@@ -90,6 +90,7 @@ func (dbcomm DrsDbCommunicationPostgres) AddSongs(songs []drs_models.Song) (errs
 
 	totalRowsAffected := int64(0)
 	for _, completeStatement := range statements {
+		fmt.Println(completeStatement)
 		resultDb := dbcomm.db.Exec(completeStatement)
 		errors := resultDb.GetErrors()
 		if errors != nil && len(errors) != 0 {
@@ -178,7 +179,7 @@ func (dbcomm DrsDbCommunicationPostgres) AddPlayerSongStats(stats []drs_models.P
 		`p1_bads=EXCLUDED.p1_bads, ` +
 		`p2_code=EXCLUDED.p2_code, ` +
 		`p2_score=EXCLUDED.p2_score, ` +
-		`P2Perfects=EXCLUDED.P2Perfects, ` +
+		`P2Perfects=EXCLUDED.p2_perfects, ` +
 		`p2_greats=EXCLUDED.p2_greats, ` +
 		`p2_goods=EXCLUDED.p2_goods, ` +
 		`p2_bads=EXCLUDED.p2_bads;`
@@ -244,7 +245,7 @@ func (dbcomm DrsDbCommunicationPostgres) AddPlayerSongStats(stats []drs_models.P
 }
 
 func (dbcomm DrsDbCommunicationPostgres) RetrieveSongStatisticsByPlayerCode(code int) (stats []drs_models.PlayerSongStats, errs []error) {
-	glog.Info("RetrieveSongStatisticsByPlayerCode for player code %d\n", code)
+	glog.Infof("RetrieveSongStatisticsByPlayerCode for player code %d\n", code)
 	resultDb := dbcomm.db.Model(&drs_models.PlayerSongStats{}).Where("player_code = ?", code).Scan(&stats)
 
 	errors := resultDb.GetErrors()
@@ -255,7 +256,7 @@ func (dbcomm DrsDbCommunicationPostgres) RetrieveSongStatisticsByPlayerCode(code
 }
 
 func (dbcomm DrsDbCommunicationPostgres) AddPlayerScores(scores []drs_models.PlayerScore) (errs []error) {
-	glog.Info("AddPlayerScores with %d scores\n", len(scores))
+	glog.Infof("AddPlayerScores with %d scores\n", len(scores))
 	batchCount := 0
 	processedCount := 0
 	statements := make([]string, 0)
