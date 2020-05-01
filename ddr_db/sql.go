@@ -611,6 +611,7 @@ func (dbcomm DdrDbCommunicationPostgres) RetrieveExtendedScoreStatisticsByPlayer
 		PlayCount int `gorm:"column:playcount" json:"playcount"`
 		ClearCount int `gorm:"column:clearcount" json:"clearcount"`
 		MaxCombo int `gorm:"column:maxcombo" json:"maxcombo"`
+		Id string `gorm:"column:id" json:"id"`
 	}
 	query := `select
 	diff.difficulty_value as level,
@@ -623,7 +624,8 @@ func (dbcomm DdrDbCommunicationPostgres) RetrieveExtendedScoreStatisticsByPlayer
 	stat.score_record as score,
 	stat.playcount as playcount,
 	stat.clearcount as clearcount,
-	stat.maxcombo as maxcombo
+	stat.maxcombo as maxcombo,
+	stat.song_id as id
 from public."ddrSongDifficulties" as diff
 inner join public."ddrSongs" as song on diff.song_id = song.id
 left outer join public."ddrSongStatistics" as stat on 
