@@ -42,7 +42,7 @@ type DdrDbCommunication interface {
 	RetrieveScoresByPlayerCode(code int) (scores []ddr_models.Score, errs []error)
 	RetrieveScoresByPlayerCodeForSong(code int, songId string) (scores []ddr_models.Score, errs []error)
 	RetrieveScoresByPlayerCodeForChart(code int, songId string, mode string, difficulty string) (scores []ddr_models.Score, errs []error)
-	RetrieveSongScores(code int, songId string, mode string, difficulty string) (scores []ddr_models.Score, errs []error)
+	RetrieveSongScores(code int, songId string, mode string, difficulty string, ordering []string) (scores []ddr_models.Score, errs []error)
 	RetrieveScores(code int, songs map[string]ScoreRequest) (scores []ddr_models.Score, errs []error)
 
 	AddWorkoutData(workoutData []ddr_models.WorkoutData) (errs []error)
@@ -548,7 +548,7 @@ type ScoreRequest struct {
 	Difficulty *string `json:"mode,omitempty"`
 }
 
-func (dbcomm DdrDbCommunicationPostgres) RetrieveSongScores(code int, songId string, mode string, difficulty string) (scores []ddr_models.Score, errs []error) {
+func (dbcomm DdrDbCommunicationPostgres) RetrieveSongScores(code int, songId string, mode string, difficulty string, ordering []string) (scores []ddr_models.Score, errs []error) {
 	chain := dbcomm.db.Model(&ddr_models.Score{})
 	if code == 0 {
 		errs = append(errs, fmt.Errorf("no user code specified"))
@@ -564,6 +564,9 @@ func (dbcomm DdrDbCommunicationPostgres) RetrieveSongScores(code int, songId str
 	}
 	if difficulty != "" {
 		chain = chain.Where("difficulty = ?", strings.ToUpper(difficulty))
+	}
+	for _, order := range ordering {
+		chain = chain.Order(order)
 	}
 
 	resultDb := chain.Find(&scores)
