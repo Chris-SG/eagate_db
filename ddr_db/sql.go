@@ -42,6 +42,8 @@ type DdrDbCommunication interface {
 	RetrieveScoresByPlayerCode(code int) (scores []ddr_models.Score, errs []error)
 	RetrieveScoresByPlayerCodeForSong(code int, songId string) (scores []ddr_models.Score, errs []error)
 	RetrieveScoresByPlayerCodeForChart(code int, songId string, mode string, difficulty string) (scores []ddr_models.Score, errs []error)
+	RetrieveSongScores(code int, songId string, mode string, difficulty string) (scores []ddr_models.Score, errs []error)
+	RetrieveScores(code int, songs map[string]ScoreRequest) (scores []ddr_models.Score, errs []error)
 
 	AddWorkoutData(workoutData []ddr_models.WorkoutData) (errs []error)
 	RetrieveWorkoutDataByPlayerCode(code int) (workoutData []ddr_models.WorkoutData, errs []error)
@@ -533,6 +535,70 @@ func (dbcomm DdrDbCommunicationPostgres) RetrieveScoresByPlayerCodeForSong(code 
 func (dbcomm DdrDbCommunicationPostgres) RetrieveScoresByPlayerCodeForChart(code int, songId string, mode string, difficulty string) (scores []ddr_models.Score, errs []error) {
 	glog.Infof("RetrieveScoresByPlayerCodeForChart for player code %d songId %s mode %s difficulty %s\n", code, songId, mode, difficulty)
 	resultDb := dbcomm.db.Model(&ddr_models.Score{}).Where("player_code = ? AND song_id = ? AND mode = ? AND difficulty = ?", code, songId, mode, difficulty).Scan(&scores)
+
+	errors := resultDb.GetErrors()
+	if errors != nil && len(errors) != 0 {
+		errs = append(errs, errors...)
+	}
+	return
+}
+
+type ScoreRequest struct {
+	Mode *string `json:"mode,omitempty"`
+	Difficulty *string `json:"mode,omitempty"`
+}
+
+func (dbcomm DdrDbCommunicationPostgres) RetrieveSongScores(code int, songId string, mode string, difficulty string) (scores []ddr_models.Score, errs []error) {
+	chain := dbcomm.db.Model(&ddr_models.Score{})
+	if code == 0 {
+		errs = append(errs, fmt.Errorf("no user code specified"))
+		return
+	}
+	if songId == "" {
+		errs = append(errs, fmt.Errorf("no song id specified"))
+		return
+	}
+	chain = chain.Where("player_code = ? AND song_id = ?", fmt.Sprintf("%d", code), songId)
+	if mode != "" {
+		chain = chain.Where("mode = ?", strings.ToUpper(mode))
+	}
+	if difficulty != "" {
+		chain = chain.Where("difficulty = ?", strings.ToUpper(difficulty))
+	}
+
+	resultDb := chain.Find(&scores)
+
+	errors := resultDb.GetErrors()
+	if errors != nil && len(errors) != 0 {
+		errs = append(errs, errors...)
+	}
+	glog.Infof("SongScores: %d rows\n", len(scores))
+
+	return
+}
+
+func (dbcomm DdrDbCommunicationPostgres) RetrieveScores(code int, songs map[string]ScoreRequest) (scores []ddr_models.Score, errs []error) {
+	resultDb := dbcomm.db.Model(&ddr_models.Score{})
+	first := true
+	for k, v := range songs {
+		where := "player_code = ? AND song_id = ?"
+		params := []string{k}
+		if v.Mode != nil {
+			where += " AND mode = ?"
+			params = append(params, strings.ToUpper(*v.Mode))
+		}
+		if v.Difficulty != nil {
+			where += " AND difficulty = ?"
+			params = append(params, strings.ToUpper(*v.Difficulty))
+		}
+		if first {
+			resultDb = resultDb.Where(where, code, params)
+		} else {
+			resultDb = resultDb.Or(where, code, params)
+		}
+	}
+
+	resultDb = resultDb.Scan(&scores)
 
 	errors := resultDb.GetErrors()
 	if errors != nil && len(errors) != 0 {
