@@ -375,3 +375,8 @@ func (dbcomm DrsDbCommunicationPostgres) RetrieveSongStatisticsByPlayerCode(code
 func cleanString(in string) string {
 	return strings.ReplaceAll(in, "'", "&#39;")
 }
+
+func fixString(in string) string {
+	return strings.ReplaceAll(in, "&#39;", "'")
+	return strings.ReplaceAll(in, "&amp;", "&")
+}

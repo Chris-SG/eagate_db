@@ -9,14 +9,13 @@ import (
 	"github.com/lib/pq"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type DdrDbCommunication interface {
 	AddSongs(songs []ddr_models.Song) (errs []error)
 	RetrieveSongIds() (songIds []string, errs []error)
-	RetrieveSongByIdWithJacket(songId string) (song ddr_models.Song, errs []error)
-	RetrieveSongsById(songIds []string) (songs []ddr_models.Song, errs []error)
-	RetrieveOrderedSongsById(songIds []string, ordering string) (songs []ddr_models.Song, errs []error)
+	RetrieveSongsById(songIds []string, ordering []string) (songs []ddr_models.Song, errs []error)
 	RetrieveJacketForSongId(songId string) (jacket string, errs []error)
 	RetrieveJacketsForSongIds(songIds []string) (jackets map[string] string, errs []error)
 
@@ -33,22 +32,18 @@ type DdrDbCommunication interface {
 	AddPlaycounts(playcountDetails []ddr_models.Playcount) (errs []error)
 	RetrievePlaycountsByPlayerCode(code int) (playcounts []ddr_models.Playcount, errs []error)
 	RetrieveLatestPlaycountByPlayerCode(code int) (playcount ddr_models.Playcount, errs []error)
-	RetrievePlaycountsByPlayerCodeInDateRange(code int, daysAgoFrom int, daysAgoTo int) (playcounts []ddr_models.Playcount, errs []error)
+	RetrievePlaycountsByPlayerCodeInDateRange(code int, startDate time.Time, endDate time.Time) (playcounts []ddr_models.Playcount, errs []error)
 
 	AddSongStatistics(statistics []ddr_models.SongStatistics) (errs []error)
-	RetrieveSongStatisticsByPlayerCode(code int) (statistics []ddr_models.SongStatistics, errs []error)
-	RetrieveSongStatisticsByPlayerCodeForSongIds(code int, songIds []string) (statistics []ddr_models.SongStatistics, errs []error)
+	RetrieveSongStatisticsByPlayerCode(code int, songIds []string) (statistics []ddr_models.SongStatistics, errs []error)
 
 	AddScores(scores []ddr_models.Score) (errs []error)
 	RetrieveScoresByPlayerCode(code int) (scores []ddr_models.Score, errs []error)
-	RetrieveScoresByPlayerCodeForSong(code int, songId string) (scores []ddr_models.Score, errs []error)
-	RetrieveScoresByPlayerCodeForChart(code int, songId string, mode string, difficulty string) (scores []ddr_models.Score, errs []error)
 	RetrieveSongScores(code int, songId string, mode string, difficulty string, ordering []string) (scores []ddr_models.Score, errs []error)
-	RetrieveScores(code int, songs map[string]ScoreRequest) (scores []ddr_models.Score, errs []error)
 
 	AddWorkoutData(workoutData []ddr_models.WorkoutData) (errs []error)
 	RetrieveWorkoutDataByPlayerCode(code int) (workoutData []ddr_models.WorkoutData, errs []error)
-	RetrieveWorkoutDataByPlayerCodeInDateRange(code int, daysAgoFrom int, daysAgoTo int) (workoutData []ddr_models.WorkoutData, errs []error)
+	RetrieveWorkoutDataByPlayerCodeInDateRange(code int, startDate time.Time, endDate time.Time) (workoutData []ddr_models.WorkoutData, errs []error)
 
 	RetrieveExtendedScoreStatisticsByPlayerCode(code int) (statisticsJson string, errs []error)
 }
@@ -119,29 +114,13 @@ func (dbcomm DdrDbCommunicationPostgres) RetrieveSongIds() (songIds []string, er
 	return
 }
 
-func (dbcomm DdrDbCommunicationPostgres) RetrieveSongsById(songIds []string) (songs []ddr_models.Song, errs []error) {
+func (dbcomm DdrDbCommunicationPostgres) RetrieveSongsById(songIds []string, ordering []string) (songs []ddr_models.Song, errs []error) {
 	glog.Infof("RetrieveSongsByIds for %d ids\n", len(songIds))
-	resultDb := dbcomm.db.Model(&ddr_models.Song{}).Select([]string{"id", "name", "artist"}).Where("id IN (?)", songIds).Scan(&songs)
-	errors := resultDb.GetErrors()
-	if errors != nil && len(errors) != 0 {
-		errs = append(errs, errors...)
+	resultDb := dbcomm.db.Model(&ddr_models.Song{}).Select([]string{"id", "name", "artist"}).Where("id IN (?)", songIds)
+	for _, order := range ordering {
+		resultDb = resultDb.Order(order)
 	}
-	return
-}
-
-func (dbcomm DdrDbCommunicationPostgres) RetrieveSongByIdWithJacket(songId string) (song ddr_models.Song, errs []error) {
-	glog.Infof("RetrieveSongsByIds for %s\n", songId)
-	resultDb := dbcomm.db.Model(&ddr_models.Song{}).Where("id = ?", songId).First(&song)
-	errors := resultDb.GetErrors()
-	if errors != nil && len(errors) != 0 {
-		errs = append(errs, errors...)
-	}
-	return
-}
-
-func (dbcomm DdrDbCommunicationPostgres) RetrieveOrderedSongsById(songIds []string, ordering string) (songs []ddr_models.Song, errs []error) {
-	glog.Infof("RetrieveOrderedSongsByIds for %d ids, ordering %s\n", len(songIds), ordering)
-	resultDb := dbcomm.db.Model(&ddr_models.Song{}).Select([]string{"id", "name", "artist"}).Where("id IN (?)", songIds).Order(ordering).Scan(&songs)
+	resultDb = resultDb.Scan(&songs)
 	errors := resultDb.GetErrors()
 	if errors != nil && len(errors) != 0 {
 		errs = append(errs, errors...)
@@ -168,6 +147,7 @@ func (dbcomm DdrDbCommunicationPostgres) RetrieveJacketForSongId(songId string) 
 
 func (dbcomm DdrDbCommunicationPostgres) RetrieveJacketsForSongIds(songIds []string) (jackets map[string] string, errs []error) {
 	glog.Infof("RetrieveJacketsForSongIds for %d ids\n", len(songIds))
+	jackets = make(map[string]string)
 
 	type tmp struct {
 		id string
@@ -210,7 +190,7 @@ func (dbcomm DdrDbCommunicationPostgres) AddDifficulties(difficulties []ddr_mode
 	var statement string
 	statementBegin := `INSERT INTO public."ddrSongDifficulties" VALUES `
 	statementEnd := ` ON CONFLICT (song_id, mode, difficulty) DO UPDATE SET difficulty_value=EXCLUDED.difficulty_value;`
-	for i, _ := range difficulties {
+	for i := range difficulties {
 		statement = fmt.Sprintf("%s ('%s', '%s', '%s', %d)",
 			statement,
 			difficulties[i].SongId,
@@ -376,10 +356,11 @@ func (dbcomm DdrDbCommunicationPostgres) RetrieveLatestPlaycountByPlayerCode(cod
 	return
 }
 
-func (dbcomm DdrDbCommunicationPostgres) RetrievePlaycountsByPlayerCodeInDateRange(code int, daysAgoFrom int, daysAgoTo int) (playcounts []ddr_models.Playcount, errs []error) {
-	glog.Infof("RetrievePlaycountsByPlayerCodeInDateRange for playerCode %d range %d-%d\n", code, daysAgoFrom, daysAgoTo)
-	resultDb := dbcomm.db.Model(&ddr_models.Playcount{}).Where(fmt.Sprintf("player_code = ? AND " +
-		"date between (now() - '%d days'::interval) and (now() - '%d days'::interval)", daysAgoFrom, daysAgoTo), code).Scan(&playcounts)
+func (dbcomm DdrDbCommunicationPostgres) RetrievePlaycountsByPlayerCodeInDateRange(code int, startDate time.Time, endDate time.Time) (playcounts []ddr_models.Playcount, errs []error) {
+	glog.Infof("RetrievePlaycountsByPlayerCodeInDateRange for playerCode %d range %d-%d\n", code, startDate.String(), endDate.String())
+	resultDb := dbcomm.db.Model(&ddr_models.Playcount{}).Where("player_code = ?", code).
+		Where("last_play_date between ? and ?", pq.FormatTimestamp(startDate), pq.FormatTimestamp(endDate)).
+		Scan(&playcounts)
 
 	errors := resultDb.GetErrors()
 	if errors != nil && len(errors) != 0 {
@@ -394,7 +375,7 @@ func (dbcomm DdrDbCommunicationPostgres) AddSongStatistics(statistics []ddr_mode
 		return
 	}
 	glog.Infof("AddSongStatistics for playerCode %d (%d statistics)\n", statistics[0].PlayerCode, len(statistics))
-	allSongStatistics, errs := dbcomm.RetrieveSongStatisticsByPlayerCode(statistics[0].PlayerCode)
+	allSongStatistics, errs := dbcomm.RetrieveSongStatisticsByPlayerCode(statistics[0].PlayerCode, []string{})
 	for i := len(statistics)-1; i >= 0; i-- {
 		for _, dbStatistic := range allSongStatistics {
 			if statistics[i].Equals(dbStatistic) {
@@ -422,7 +403,7 @@ func (dbcomm DdrDbCommunicationPostgres) AddSongStatistics(statistics []ddr_mode
 		`clearcount=EXCLUDED.clearcount, ` +
 		`maxcombo=EXCLUDED.maxcombo, ` +
 		`lastplayed=EXCLUDED.lastplayed;`
-	for i, _ := range statistics {
+	for i := range statistics {
 		statement = fmt.Sprintf("%s (%d, '%s', '%s', %d, %d, %d, '%s', '%s', '%s', '%s', %d)",
 			statement,
 			statistics[i].BestScore,
@@ -462,20 +443,13 @@ func (dbcomm DdrDbCommunicationPostgres) AddSongStatistics(statistics []ddr_mode
 
 }
 
-func (dbcomm DdrDbCommunicationPostgres) RetrieveSongStatisticsByPlayerCode(code int) (statistics []ddr_models.SongStatistics, errs []error) {
+func (dbcomm DdrDbCommunicationPostgres) RetrieveSongStatisticsByPlayerCode(code int, songIds []string) (statistics []ddr_models.SongStatistics, errs []error) {
 	glog.Info("RetrieveSongStatisticsByPlayerCode for player code %d\n", code)
-	resultDb := dbcomm.db.Model(&ddr_models.SongStatistics{}).Where("player_code = ?", code).Scan(&statistics)
-
-	errors := resultDb.GetErrors()
-	if errors != nil && len(errors) != 0 {
-		errs = append(errs, errors...)
+	resultDb := dbcomm.db.Model(&ddr_models.SongStatistics{}).Where("player_code = ?", code)
+	if len(songIds) > 0 {
+		resultDb = resultDb.Where("song_id IN (?)", songIds)
 	}
-	return
-}
-
-func (dbcomm DdrDbCommunicationPostgres) RetrieveSongStatisticsByPlayerCodeForSongIds(code int, songIds []string) (statistics []ddr_models.SongStatistics, errs []error) {
-	glog.Info("RetrieveSongStatisticsByPlayerCodeForSongIds for player code %d\n", code)
-	resultDb := dbcomm.db.Model(&ddr_models.SongStatistics{}).Where("player_code = ? AND song_id IN (?)", code, songIds).Scan(&statistics)
+	resultDb = resultDb.Scan(&statistics)
 
 	errors := resultDb.GetErrors()
 	if errors != nil && len(errors) != 0 {
@@ -492,7 +466,7 @@ func (dbcomm DdrDbCommunicationPostgres) AddScores(scores []ddr_models.Score) (e
 	var statement string
 	statementBegin := `INSERT INTO public."ddrScores" VALUES `
 	statementEnd := ` ON CONFLICT DO NOTHING;`
-	for i, _ := range scores {
+	for i := range scores {
 		statement = fmt.Sprintf("%s (%d, '%s', '%s', '%s', '%s', '%s', %d)",
 			statement,
 			scores[i].Score,
@@ -539,33 +513,6 @@ func (dbcomm DdrDbCommunicationPostgres) RetrieveScoresByPlayerCode(code int) (s
 	return
 }
 
-func (dbcomm DdrDbCommunicationPostgres) RetrieveScoresByPlayerCodeForSong(code int, songId string) (scores []ddr_models.Score, errs []error) {
-	glog.Infof("RetrieveScoresByPlayerCodeForSong for player code %d songId %s\n", code, songId)
-	resultDb := dbcomm.db.Model(&ddr_models.Score{}).Where("player_code = ? AND song_id = ?", code, songId).Scan(&scores)
-
-	errors := resultDb.GetErrors()
-	if errors != nil && len(errors) != 0 {
-		errs = append(errs, errors...)
-	}
-	return
-}
-
-func (dbcomm DdrDbCommunicationPostgres) RetrieveScoresByPlayerCodeForChart(code int, songId string, mode string, difficulty string) (scores []ddr_models.Score, errs []error) {
-	glog.Infof("RetrieveScoresByPlayerCodeForChart for player code %d songId %s mode %s difficulty %s\n", code, songId, mode, difficulty)
-	resultDb := dbcomm.db.Model(&ddr_models.Score{}).Where("player_code = ? AND song_id = ? AND mode = ? AND difficulty = ?", code, songId, mode, difficulty).Scan(&scores)
-
-	errors := resultDb.GetErrors()
-	if errors != nil && len(errors) != 0 {
-		errs = append(errs, errors...)
-	}
-	return
-}
-
-type ScoreRequest struct {
-	Mode *string `json:"mode,omitempty"`
-	Difficulty *string `json:"mode,omitempty"`
-}
-
 func (dbcomm DdrDbCommunicationPostgres) RetrieveSongScores(code int, songId string, mode string, difficulty string, ordering []string) (scores []ddr_models.Score, errs []error) {
 	chain := dbcomm.db.Model(&ddr_models.Score{})
 	if code == 0 {
@@ -598,43 +545,13 @@ func (dbcomm DdrDbCommunicationPostgres) RetrieveSongScores(code int, songId str
 	return
 }
 
-func (dbcomm DdrDbCommunicationPostgres) RetrieveScores(code int, songs map[string]ScoreRequest) (scores []ddr_models.Score, errs []error) {
-	resultDb := dbcomm.db.Model(&ddr_models.Score{})
-	first := true
-	for k, v := range songs {
-		where := "player_code = ? AND song_id = ?"
-		params := []string{k}
-		if v.Mode != nil {
-			where += " AND mode = ?"
-			params = append(params, strings.ToUpper(*v.Mode))
-		}
-		if v.Difficulty != nil {
-			where += " AND difficulty = ?"
-			params = append(params, strings.ToUpper(*v.Difficulty))
-		}
-		if first {
-			resultDb = resultDb.Where(where, code, params)
-		} else {
-			resultDb = resultDb.Or(where, code, params)
-		}
-	}
-
-	resultDb = resultDb.Scan(&scores)
-
-	errors := resultDb.GetErrors()
-	if errors != nil && len(errors) != 0 {
-		errs = append(errs, errors...)
-	}
-	return
-}
-
 func (dbcomm DdrDbCommunicationPostgres) AddWorkoutData(workoutData []ddr_models.WorkoutData) (errs []error) {
 	glog.Infof("AddWorkoutData: %d data points\n", len(workoutData))
 	processedCount := 0
 	var statement string
 	statementBegin := `INSERT INTO public."ddrWorkoutData" VALUES `
 	statementEnd := ` ON CONFLICT (date, player_code) DO UPDATE SET playcount=EXCLUDED.playcount, kcal=EXCLUDED.kcal;`
-	for i, _ := range workoutData {
+	for i := range workoutData {
 		statement = fmt.Sprintf("%s ('%s', '%d', '%f', %d)",
 			statement,
 			pq.FormatTimestamp(workoutData[i].Date),
@@ -671,65 +588,71 @@ func (dbcomm DdrDbCommunicationPostgres) RetrieveWorkoutDataByPlayerCode(code in
 	return
 }
 
-func (dbcomm DdrDbCommunicationPostgres) RetrieveWorkoutDataByPlayerCodeInDateRange(code int, daysAgoFrom int, daysAgoTo int) (workoutData []ddr_models.WorkoutData, errs []error) {
-	glog.Infof("RetrieveWorkoutDataByPlayerCodeInDateRange for player code %d days ago %d to %d\n", code, daysAgoFrom, daysAgoTo)
-	resultDb := dbcomm.db.Model(&ddr_models.WorkoutData{}).Where(
-		fmt.Sprintf("player_code = ? AND " +
-			"date between (now() - '%d days'::interval) and (now() - '%d days'::interval)", daysAgoFrom, daysAgoTo), code).Scan(&workoutData)
+func (dbcomm DdrDbCommunicationPostgres) RetrieveWorkoutDataByPlayerCodeInDateRange(code int, startDate time.Time, endDate time.Time) (workoutData []ddr_models.WorkoutData, errs []error) {
+	glog.Infof("player code %d days ago %s to %s\n", code, startDate.String(), endDate.String())
+	resultDb := dbcomm.db.
+		Model(&ddr_models.WorkoutData{}).
+		Where("player_code = ?", code).
+		Where("date between ? and ?", startDate, endDate).
+		Scan(&workoutData)
 
 	errors := resultDb.GetErrors()
 	if errors != nil && len(errors) != 0 {
 		errs = append(errs, errors...)
 	}
-	glog.Infof("RetrieveWorkoutDataByPlayerCodeInDateRange for player code %d: %d data points\n", code, len(workoutData))
+	glog.Infof("player code %d: %d data points\n", code, len(workoutData))
 	return
+}
+type DdrStatisticsTable struct {
+	Level int `json:"level"`
+	Title string `json:"title"`
+	Artist string `json:"artist"`
+	Mode string `json:"mode"`
+	Difficulty string `json:"difficulty"`
+	Lamp string `json:"lamp"`
+	Rank string `json:"rank"`
+	Score int `json:"score"`
+	PlayCount int `gorm:"column:playcount" json:"playcount"`
+	ClearCount int `gorm:"column:clearcount" json:"clearcount"`
+	MaxCombo int `gorm:"column:maxcombo" json:"maxcombo"`
+	Id string `gorm:"column:id" json:"id"`
 }
 
 func (dbcomm DdrDbCommunicationPostgres) RetrieveExtendedScoreStatisticsByPlayerCode(code int) (statisticsJson string, errs []error) {
-	type DdrStatisticsTable struct {
-		Level int `json:"level"`
-		Title string `json:"title"`
-		Artist string `json:"artist"`
-		Mode string `json:"mode"`
-		Difficulty string `json:"difficulty"`
-		Lamp string `json:"lamp"`
-		Rank string `json:"rank"`
-		Score int `json:"score"`
-		PlayCount int `gorm:"column:playcount" json:"playcount"`
-		ClearCount int `gorm:"column:clearcount" json:"clearcount"`
-		MaxCombo int `gorm:"column:maxcombo" json:"maxcombo"`
-		Id string `gorm:"column:id" json:"id"`
-	}
-	query := `select
-	diff.difficulty_value as level,
-	song.name as title,
-	song.artist as artist,
-	diff.mode as mode,
-	diff.difficulty as difficulty,
-	stat.clear_lamp as lamp,
-	stat.rank as rank,
-	stat.score_record as score,
-	stat.playcount as playcount,
-	stat.clearcount as clearcount,
-	stat.maxcombo as maxcombo,
-	stat.song_id as id
-from public."ddrSongDifficulties" as diff
-inner join public."ddrSongs" as song on diff.song_id = song.id
-left outer join public."ddrSongStatistics" as stat on 
-	diff.song_id = stat.song_id
-	and diff.mode = stat.mode
-	and diff.difficulty = stat.difficulty
-	and stat.player_code = ?
-where diff.difficulty_value != -1
-order by diff.mode desc, diff.difficulty_value;`
-
 	stats := make([]DdrStatisticsTable, 0)
-	glog.Infoln(query)
 
-	resultDb := dbcomm.db.Raw(query, code).Scan(&stats)
+	resultDb := dbcomm.db.
+		Table("public.\"ddrSongDifficulties\" diff").
+		Select("diff.difficulty_value as level," +
+			"diff.mode as mode," +
+			"diff.difficulty as difficulty," +
+			"song.name as title," +
+			"song.artist as artist," +
+			"stat.clear_lamp as lamp," +
+			"stat.rank as rank," +
+			"stat.score_record as score," +
+			"stat.playcount as playcount," +
+			"stat.clearcount as clearcount," +
+			"stat.maxcombo as maxcombo," +
+			"diff.song_id as id").
+		Joins("inner join public.\"ddrSongs\" song on diff.song_id = song.id").
+		Joins("left outer join public.\"ddrSongStatistics\" stat on " +
+			"diff.song_id = stat.song_id AND " +
+			"diff.mode = stat.mode AND " +
+			"diff.difficulty = stat.difficulty AND " +
+			"stat.player_code = ?", code).
+		Where("diff.difficulty_value != -1").
+		Order("diff.mode desc, diff.difficulty_value").
+		Scan(&stats)
+
 	errors := resultDb.GetErrors()
 	if errors != nil && len(errors) != 0 {
 		errs = append(errs, errors...)
+	}
+
+	for i := range stats {
+		stats[i].Title = fixString(stats[i].Title)
+		stats[i].Artist = fixString(stats[i].Artist)
 	}
 
 	result, err := json.Marshal(stats)
@@ -737,10 +660,16 @@ order by diff.mode desc, diff.difficulty_value;`
 		errs = append(errs, fmt.Errorf("failed to convert loaded extended statistics to json for code %d: %s", code, err.Error()))
 		return
 	}
+
 	statisticsJson = string(result)
 	return
 }
 
 func cleanString(in string) string {
 	return strings.ReplaceAll(in, "'", "&#39;")
+}
+
+func fixString(in string) string {
+	return strings.ReplaceAll(in, "&#39;", "'")
+	return strings.ReplaceAll(in, "&amp;", "&")
 }
