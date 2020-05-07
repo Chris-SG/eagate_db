@@ -17,6 +17,7 @@ type DdrDbCommunication interface {
 	RetrieveSongByIdWithJacket(songId string) (song ddr_models.Song, errs []error)
 	RetrieveSongsById(songIds []string) (songs []ddr_models.Song, errs []error)
 	RetrieveOrderedSongsById(songIds []string, ordering string) (songs []ddr_models.Song, errs []error)
+	RetrieveJacketForSongId(songId string) (jacket string, errs []error)
 	RetrieveJacketsForSongIds(songIds []string) (jackets map[string] string, errs []error)
 
 	AddDifficulties(difficulties []ddr_models.SongDifficulty) (errs []error)
@@ -144,6 +145,23 @@ func (dbcomm DdrDbCommunicationPostgres) RetrieveOrderedSongsById(songIds []stri
 	errors := resultDb.GetErrors()
 	if errors != nil && len(errors) != 0 {
 		errs = append(errs, errors...)
+	}
+	return
+}
+
+func (dbcomm DdrDbCommunicationPostgres) RetrieveJacketForSongId(songId string) (jacket string, errs []error) {
+	glog.Infof("getting for id %s\n", songId)
+
+	jacketSlice := make([]string, 0)
+	resultDb := dbcomm.db.Model(&ddr_models.Song{}).Limit(1).Select("image").Where("id = ?", songId).Pluck("image", &jacketSlice)
+
+	errors := resultDb.GetErrors()
+	if errors != nil && len(errors) != 0 {
+		errs = append(errs, errors...)
+	}
+
+	if len(jacketSlice) > 0 {
+		jacket = jacketSlice[0]
 	}
 	return
 }
