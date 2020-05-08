@@ -1,12 +1,14 @@
 package drs_db
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/chris-sg/eagate_models/drs_models"
 	"github.com/golang/glog"
 	"github.com/jinzhu/gorm"
 	"github.com/lib/pq"
 	"strings"
+	"time"
 )
 
 type DrsDbCommunication interface {
@@ -25,6 +27,8 @@ type DrsDbCommunication interface {
 	//RetrieveDifficulties(songs []drs_models.Song) (difficulties []drs_models.Difficulty, errs []error)
 	RetrieveSongStatisticsByPlayerCode(code int) (stats []drs_models.PlayerSongStats, errs []error)
 	//RetrievePlayerScores(code int) (scores []drs_models.PlayerScore, errs []error)
+
+	RetrieveDataForTable(code int) (json string, errs []error)
 }
 
 func CreateDrsDbCommunicationPostgres(db *gorm.DB) DrsDbCommunicationPostgres {
@@ -368,6 +372,94 @@ func (dbcomm DrsDbCommunicationPostgres) RetrieveSongStatisticsByPlayerCode(code
 	if errors != nil && len(errors) != 0 {
 		errs = append(errs, errors...)
 	}
+	return
+}
+
+type DrsDataTable struct {
+	Title string `json:"title"`
+	Artist string `json:"artist"`
+	Mode string `json:"mode"`
+	Difficulty string `json:"difficulty"`
+
+	Score int `json:"score"`
+	PlayCount int `json:"playcount"`
+	BestScoreDateTime time.Time `json:"bestscoretime"`
+
+	P1Code int `gorm:"p1code"`
+	P1Score int `gorm:"p1score"`
+	P1Perfects int `gorm:"p1perfects"`
+	P1Greats int `gorm:"p1greats"`
+	P1Goods int `gorm:"p1goods"`
+	P1Bads int `gorm:"p1bads"`
+
+	P2Code int `gorm:"p2code"`
+	P2Score int `gorm:"p2score"`
+	P2Perfects int `gorm:"p2perfects"`
+	P2Greats int `gorm:"p2greats"`
+	P2Goods int `gorm:"p2goods"`
+	P2Bads int `gorm:"p2bads"`
+
+	SongId string `gorm:"id"`
+	Code int `gorm:"code"`
+	Param int `json:"param"`
+
+	//Combo
+	//LastPlayDateTime
+}
+
+func (dbcomm DrsDbCommunicationPostgres) RetrieveDataForTable(code int) (resultJson string, errs []error) {
+	stats := make([]DrsDataTable, 0)
+
+	resultDb := dbcomm.db.
+		Table("public.\"drsDifficulties\" diff").
+		Select("diff.level as level," +
+			"diff.mode as mode," +
+			"diff.difficulty as difficulty," +
+			"song.name as title," +
+			"song.artist as artist," +
+			"stat.best_score as score," +
+			"stat.play_count as playcount," +
+			"stat.best_score_time as bestscoredatetime," +
+			"stat.p1_code as p1code," +
+			"stat.p1_perfects as p1perfects," +
+			"stat.p1_greats as p1greats," +
+			"stat.p1_goods as p1goods," +
+			"stat.p1_bads as p1bads," +
+			"stat.p2_code as p2code," +
+			"stat.p2_perfects as p2perfects," +
+			"stat.p2_greats as p2greats," +
+			"stat.p2_goods as p2goods," +
+			"stat.p2_bads as p2bads," +
+			"diff.song_id as id," +
+			"stat.player_code as code," +
+			"stat.param as param").
+		Joins("inner join public.\"drsSongs\" song on diff.song_id = song.song_id").
+		Joins("left outer join public.\"drsPlayerSongStats\" stat on " +
+			"diff.song_id = stat.song_id AND " +
+			"diff.mode = stat.mode AND " +
+			"diff.difficulty = stat.difficulty AND " +
+			"stat.player_code = ?", code).
+		Order("diff.mode desc, diff.difficulty_value").
+		Scan(&stats)
+
+
+	errors := resultDb.GetErrors()
+	if errors != nil && len(errors) != 0 {
+		errs = append(errs, errors...)
+	}
+
+	for i := range stats {
+		stats[i].Title = fixString(stats[i].Title)
+		stats[i].Artist = fixString(stats[i].Artist)
+	}
+
+	result, err := json.Marshal(stats)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("failed to convert loaded extended statistics to json for code %d: %s", code, err.Error()))
+		return
+	}
+
+	resultJson = string(result)
 	return
 }
 
