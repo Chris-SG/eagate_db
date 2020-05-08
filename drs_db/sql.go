@@ -380,6 +380,7 @@ type DrsDataTable struct {
 	Artist string `json:"artist"`
 	Mode string `json:"mode"`
 	Difficulty string `json:"difficulty"`
+	Level string `json:"level"`
 
 	Score int `json:"score"`
 	PlayCount int `json:"playcount" gorm:"column:playcount"`
@@ -413,6 +414,7 @@ func (dbcomm DrsDbCommunicationPostgres) RetrieveDataForTable(code int) (resultJ
 		Select("diff.level as level," +
 			"diff.mode as mode," +
 			"diff.difficulty as difficulty," +
+			"diff.level as level," +
 			"song.name as title," +
 			"song.artist as artist," +
 			"stat.best_score as score," +

@@ -26,6 +26,8 @@ github.com/chris-sg/eagate_models v0.0.0-20200429134546-a6a671a90f32 h1:lsHm8T2S
 github.com/chris-sg/eagate_models v0.0.0-20200429134546-a6a671a90f32/go.mod h1:4KbN1UqlmA6tSV7FETgmHHOiWs+WBU3xzf40xbosCjM=
 github.com/chris-sg/eagate_models v0.0.0-20200508055405-8dcd8fa6d829 h1:/WR4+tADPTJAHEy6x37F95fBgdSME0mSwqGXlAQWzW0=
 github.com/chris-sg/eagate_models v0.0.0-20200508055405-8dcd8fa6d829/go.mod h1:4KbN1UqlmA6tSV7FETgmHHOiWs+WBU3xzf40xbosCjM=
+github.com/chris-sg/eagate_models v0.0.0-20200509022728-a8000473b3c8 h1:6xPYO0oUkEA56VwPhAGQCD/55qE/6IWO7fPxUQnmDQE=
+github.com/chris-sg/eagate_models v0.0.0-20200509022728-a8000473b3c8/go.mod h1:4KbN1UqlmA6tSV7FETgmHHOiWs+WBU3xzf40xbosCjM=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
