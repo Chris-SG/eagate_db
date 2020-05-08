@@ -385,22 +385,22 @@ type DrsDataTable struct {
 	PlayCount int `json:"playcount"`
 	BestScoreDateTime time.Time `json:"bestscoretime"`
 
-	P1Code int `gorm:"p1code"`
-	P1Score int `gorm:"p1score"`
-	P1Perfects int `gorm:"p1perfects"`
-	P1Greats int `gorm:"p1greats"`
-	P1Goods int `gorm:"p1goods"`
-	P1Bads int `gorm:"p1bads"`
+	P1Code int `json:"p1code"`
+	P1Score int `json:"p1score"`
+	P1Perfects int `json:"p1perfects"`
+	P1Greats int `json:"p1greats"`
+	P1Goods int `json:"p1goods"`
+	P1Bads int `json:"p1bads"`
 
-	P2Code int `gorm:"p2code"`
-	P2Score int `gorm:"p2score"`
-	P2Perfects int `gorm:"p2perfects"`
-	P2Greats int `gorm:"p2greats"`
-	P2Goods int `gorm:"p2goods"`
-	P2Bads int `gorm:"p2bads"`
+	P2Code int `json:"p2code"`
+	P2Score int `json:"p2score"`
+	P2Perfects int `json:"p2perfects"`
+	P2Greats int `json:"p2greats"`
+	P2Goods int `json:"p2goods"`
+	P2Bads int `json:"p2bads"`
 
-	SongId string `gorm:"id"`
-	Code int `gorm:"code"`
+	SongId string `json:"id"`
+	Code int `json:"code"`
 	Param int `json:"param"`
 
 	//Combo
