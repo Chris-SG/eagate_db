@@ -439,7 +439,7 @@ func (dbcomm DrsDbCommunicationPostgres) RetrieveDataForTable(code int) (resultJ
 			"diff.mode = stat.mode AND " +
 			"diff.difficulty = stat.difficulty AND " +
 			"stat.player_code = ?", code).
-		Order("diff.mode desc, diff.difficulty_value").
+		Order("diff.mode desc, diff.level").
 		Scan(&stats)
 
 
