@@ -399,7 +399,7 @@ type DrsDataTable struct {
 	P2Goods int `json:"p2goods" gorm:"column:p2goods"`
 	P2Bads int `json:"p2bads" gorm:"column:p2bads"`
 
-	SongId string `json:"id"`
+	SongId string `json:"id" gorm:"column:id"`
 	Code int `json:"code"`
 	Param int `json:"param"`
 
