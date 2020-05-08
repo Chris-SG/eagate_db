@@ -383,21 +383,21 @@ type DrsDataTable struct {
 
 	Score int `json:"score"`
 	PlayCount int `json:"playcount"`
-	BestScoreDateTime time.Time `json:"bestscoretime"`
+	BestScoreDateTime time.Time `json:"bestscoretime" gorm:"column:bestscoredatetime"`
 
-	P1Code int `json:"p1code"`
-	P1Score int `json:"p1score"`
-	P1Perfects int `json:"p1perfects"`
-	P1Greats int `json:"p1greats"`
-	P1Goods int `json:"p1goods"`
-	P1Bads int `json:"p1bads"`
+	P1Code int `json:"p1code" gorm:"column:p1code"`
+	P1Score int `json:"p1score" gorm:"column:p1score"`
+	P1Perfects int `json:"p1perfects" gorm:"column:p1perfects"`
+	P1Greats int `json:"p1greats" gorm:"column:p1greats"`
+	P1Goods int `json:"p1goods" gorm:"column:p1goods"`
+	P1Bads int `json:"p1bads" gorm:"column:p1bads"`
 
-	P2Code int `json:"p2code"`
-	P2Score int `json:"p2score"`
-	P2Perfects int `json:"p2perfects"`
-	P2Greats int `json:"p2greats"`
-	P2Goods int `json:"p2goods"`
-	P2Bads int `json:"p2bads"`
+	P2Code int `json:"p2code" gorm:"column:p2code"`
+	P2Score int `json:"p2score" gorm:"column:p2score"`
+	P2Perfects int `json:"p2perfects" gorm:"column:p2perfects"`
+	P2Greats int `json:"p2greats" gorm:"column:p2greats"`
+	P2Goods int `json:"p2goods" gorm:"column:p2goods"`
+	P2Bads int `json:"p2bads" gorm:"column:p2bads"`
 
 	SongId string `json:"id"`
 	Code int `json:"code"`
